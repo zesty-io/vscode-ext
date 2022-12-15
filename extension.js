@@ -158,11 +158,33 @@ async function activate(context) {
           zestySDK.instance.updateView(fileZuid.zuid, {
             code: code,
           });
-          vscode.window.showInformationMessage(
-            `ZUID : ${fileZuid.zuid} has been updated and sync.`
-          );
-          activeTextEditor.document.save;
+          
         }
+
+        if (fileBreakDown[0] === "styles") {
+          zestySDK.instance.updateStylesheet(fileZuid.zuid, {
+            code: code,
+          });
+        }
+        if(fileBreakDown[0] === "scripts"){
+          await fetch(
+            `https://${zestyConfig.instance_zuid}.api.zesty.io/v1/web/scripts/${fileZuid.zuid}`,
+            {
+              method: "PUT",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${zestyConfig.token}`,
+              },
+              body: JSON.stringify({
+                code: code,
+              }),
+            }
+          );
+        }
+
+        vscode.window.showInformationMessage(
+          `ZUID : ${fileZuid.zuid} has been updated and sync.`
+        );
       }
     })
   );
