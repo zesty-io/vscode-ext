@@ -71,7 +71,7 @@ async function syncInstanceStyles() {
       createdAt: stylesheet.updatedAt,
     };
   });
-  zestyConfig.instance.stylesheet = styleObj;
+  zestyConfig.instance.styles = styleObj;
 }
 
 async function syncInstanceScipts() {
@@ -94,32 +94,7 @@ async function syncInstanceScipts() {
       createdAt: script.updatedAt,
     };
   });
-  zestyConfig.instance.scipts = scriptObj;
-}
-
-async function activate(context) {
-  try {
-    basePath = vscode.workspace.workspaceFolders[0].uri.fsPath;
-    const zestyData = readConfig(`${basePath}/${zestyPackageConfig}`, "JSON");
-    zestyConfig = { ...zestyData, instance: {} };
-    zestySDK = new sdk(zestyConfig.instance_zuid, zestyConfig.token);
-    await makeFolders(folders);
-    await syncInstanceView();
-    await syncInstanceStyles();
-    await syncInstanceScipts();
-    await writeConfig();
-  } catch (e) {
-    console.log(e);
-    vscode.window.showInformationMessage(e.message);
-  }
-  let disposable = vscode.commands.registerCommand(
-    "zesty-vscode-extension.run",
-    function () {
-      vscode.window.showInformationMessage("Extension is now running!");
-    }
-  );
-
-  context.subscriptions.push(disposable);
+  zestyConfig.instance.scripts = scriptObj;
 }
 
 function readConfig(path, fileType) {
@@ -139,6 +114,58 @@ async function writeConfig() {
       await fs.writeFileSync(path, JSON.stringify(zestyConfig, null, 4));
     }
   }
+}
+
+async function init() {
+  await makeFolders(folders);
+  await syncInstanceView();
+  await syncInstanceStyles();
+  await syncInstanceScipts();
+  await writeConfig();
+}
+
+async function activate(context) {
+  basePath = vscode.workspace.workspaceFolders[0].uri.fsPath;
+  const zestyData = readConfig(`${basePath}/${zestyPackageConfig}`, "JSON");
+  zestyConfig = zestyData;
+  if (!zestyData.hasOwnProperty("instance")) zestyConfig.instance = {};
+
+  zestySDK = new sdk(zestyConfig.instance_zuid, zestyConfig.token);
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("zesty-vscode-extension.run", init)
+  );
+  context.subscriptions.push(
+    vscode.commands.registerCommand("zesty-vscode-extension.saveFile", () => {
+      const { activeTextEditor } = vscode.window;
+      if (!activeTextEditor) {
+        vscode.window.showInformationMessage("There is no open file.");
+        return;
+      }
+      const filePath = activeTextEditor.document.uri;
+      var fileBreakDown = filePath.path
+        .split("/")
+        .splice(Math.max(filePath.path.split("/").length - 2, 0));
+
+      if (activeTextEditor.document.languageId === "html")
+        fileBreakDown[1] = fileBreakDown[1].replace(".html", "");
+
+      const fileZuid = zestyConfig.instance[fileBreakDown[0]][fileBreakDown[1]];
+      const code = activeTextEditor.document.getText();
+
+      if (fileZuid) {
+        if (fileBreakDown[0] === "views") {
+          zestySDK.instance.updateView(fileZuid.zuid, {
+            code: code,
+          });
+          vscode.window.showInformationMessage(
+            `ZUID : ${fileZuid.zuid} has been updated and sync.`
+          );
+          activeTextEditor.document.save;
+        }
+      }
+    })
+  );
 }
 
 // This method is called when your extension is deactivated
