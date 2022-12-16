@@ -10,8 +10,7 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:zesty-vscode-extension.run",
-    "onCommand:zesty-vscode-extension.saveFile"
+    "*"
   ],
   "main": "./extension.js",
   "contributes": {

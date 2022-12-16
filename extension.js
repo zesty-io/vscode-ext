@@ -67,6 +67,7 @@ async function syncInstanceStyles() {
     makeFileSync("style", stylesheet.fileName, stylesheet.code);
     styleObj[stylesheet.fileName] = {
       zuid: stylesheet.ZUID,
+      type: stylesheet.type,
       updatedAt: stylesheet.createdAt,
       createdAt: stylesheet.updatedAt,
     };
@@ -90,6 +91,7 @@ async function syncInstanceScipts() {
     makeFileSync("script", script.fileName, script.code);
     scriptObj[script.fileName] = {
       zuid: script.ZUID,
+      type: script.type,
       updatedAt: script.createdAt,
       createdAt: script.updatedAt,
     };
@@ -116,12 +118,54 @@ async function writeConfig() {
   }
 }
 
-async function init() {
-  await makeFolders(folders);
-  await syncInstanceView();
-  await syncInstanceStyles();
-  await syncInstanceScipts();
-  await writeConfig();
+async function saveFile(document) {
+  const filePath = document.uri;
+  var fileBreakDown = filePath.path
+    .split("/")
+    .splice(Math.max(filePath.path.split("/").length - 2, 0));
+
+  if (document.languageId === "html")
+    fileBreakDown[1] = fileBreakDown[1].replace(".html", "");
+
+  const fileZuid = zestyConfig.instance[fileBreakDown[0]][fileBreakDown[1]];
+  const code = document.getText();
+
+  if (fileZuid) {
+    if (fileBreakDown[0] === "views") {
+      await zestySDK.instance.updateView(fileZuid.zuid, {
+        code: code,
+      });
+    }
+
+    if (fileBreakDown[0] === "styles") {
+      await zestySDK.instance.updateStylesheet(fileZuid.zuid, {
+        filename: fileBreakDown[1],
+        type: fileZuid.type,
+        code: code,
+      });
+    }
+    if (fileBreakDown[0] === "scripts") {
+      await fetch(
+        `https://${zestyConfig.instance_zuid}.api.zesty.io/v1/web/scripts/${fileZuid.zuid}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${zestyConfig.token}`,
+          },
+          body: JSON.stringify({
+            filename: fileBreakDown[1],
+            code: code,
+            type: fileZuid.type,
+          }),
+        }
+      );
+    }
+
+    vscode.window.showInformationMessage(
+      `ZUID : ${fileZuid.zuid} has been updated and sync.`
+    );
+  }
 }
 
 async function activate(context) {
@@ -133,61 +177,18 @@ async function activate(context) {
   zestySDK = new sdk(zestyConfig.instance_zuid, zestyConfig.token);
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("zesty-vscode-extension.run", init)
-  );
-  context.subscriptions.push(
-    vscode.commands.registerCommand("zesty-vscode-extension.saveFile", () => {
-      const { activeTextEditor } = vscode.window;
-      if (!activeTextEditor) {
-        vscode.window.showInformationMessage("There is no open file.");
-        return;
-      }
-      const filePath = activeTextEditor.document.uri;
-      var fileBreakDown = filePath.path
-        .split("/")
-        .splice(Math.max(filePath.path.split("/").length - 2, 0));
-
-      if (activeTextEditor.document.languageId === "html")
-        fileBreakDown[1] = fileBreakDown[1].replace(".html", "");
-
-      const fileZuid = zestyConfig.instance[fileBreakDown[0]][fileBreakDown[1]];
-      const code = activeTextEditor.document.getText();
-
-      if (fileZuid) {
-        if (fileBreakDown[0] === "views") {
-          zestySDK.instance.updateView(fileZuid.zuid, {
-            code: code,
-          });
-          
-        }
-
-        if (fileBreakDown[0] === "styles") {
-          zestySDK.instance.updateStylesheet(fileZuid.zuid, {
-            code: code,
-          });
-        }
-        if(fileBreakDown[0] === "scripts"){
-          await fetch(
-            `https://${zestyConfig.instance_zuid}.api.zesty.io/v1/web/scripts/${fileZuid.zuid}`,
-            {
-              method: "PUT",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${zestyConfig.token}`,
-              },
-              body: JSON.stringify({
-                code: code,
-              }),
-            }
-          );
-        }
-
-        vscode.window.showInformationMessage(
-          `ZUID : ${fileZuid.zuid} has been updated and sync.`
-        );
-      }
+    vscode.commands.registerCommand("zesty-vscode-extension.run", async () => {
+      await makeFolders(folders);
+      await syncInstanceView();
+      await syncInstanceStyles();
+      await syncInstanceScipts();
+      await writeConfig();
     })
   );
+
+  vscode.workspace.onDidSaveTextDocument(async (document) => {
+    await saveFile(document);
+  });
 }
 
 // This method is called when your extension is deactivated
