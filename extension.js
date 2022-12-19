@@ -219,8 +219,8 @@ async function activate(context) {
           zestyConfig.instance.styles[filename] = {
             zuid: res.data.ZUID,
             type: res.data.type,
-            updateAt: res.data.updateAt,
-            createAt: res.data.createAt,
+            updatedAt: res.data.updatedAt,
+            createdAt: res.data.createdAt,
           };
         }
       }
@@ -241,19 +241,20 @@ async function activate(context) {
           zestyConfig.instance.scripts[filename] = {
             zuid: res.data.ZUID,
             type: res.data.type,
-            updateAt: res.data.updateAt,
-            createAt: res.data.createAt,
+            updatedAt: res.data.updatedAt,
+            createdAt: res.data.createdAt,
           };
         }
       }
       if (fileType === "html") {
+        payload.filename = filename.replace(".html", "");
         const res = await zestySDK.instance.createView(payload);
+        console.log(res);
         if (res.data.ZUID) {
-          zestyConfig.instance.views[filename] = {
+          zestyConfig.instance.views[payload.filename] = {
             zuid: res.data.ZUID,
-            type: res.data.type,
-            updateAt: res.data.updateAt,
-            createAt: res.data.createAt,
+            updatedAt: res.data.updatedAt,
+            createdAt: res.data.createdAt,
           };
         }
       }
