@@ -208,26 +208,24 @@ async function activate(context) {
       var filename = newSplitPath.join("/");
       var fileType = getExtension(filename);
       var payload = {
-        code: null,
-        fileName: filename,
-        fileType: "snippet",
+        filename: filename,
+        type: "snippet",
+        code: " ",
       };
       if (fileType === "css" || fileType === "less" || fileType === "scss") {
-        payload.fileType = `text/${fileType}`;
+        payload.type = `text/${fileType}`;
         const res = await zestySDK.instance.createStylesheet(payload);
         if (res.data.ZUID) {
-          zestyConfig.styles.push({
-            filename: {
-              zuid: res.data.ZUID,
-              type: payload.fileType,
-              updateAt: res.data.updateAt,
-              createAt: res.data.createAt,
-            },
-          });
+          zestyConfig.instance.styles[filename] = {
+            zuid: res.data.ZUID,
+            type: res.data.type,
+            updateAt: res.data.updateAt,
+            createAt: res.data.createAt,
+          };
         }
       }
       if (fileType === "js") {
-        payload.fileType = "text/javascript";
+        payload.type = "text/javascript";
         const result = await fetch(
           `https://${zestyConfig.instance_zuid}.api.zesty.io/v1/web/scripts`,
           {
@@ -239,28 +237,24 @@ async function activate(context) {
           }
         );
         const res = await result.json();
-        if (result.data.ZUID) {
-          zestyConfig.scripts.push({
-            filename: {
-              zuid: res.data.ZUID,
-              type: payload.fileType,
-              updateAt: res.data.updateAt,
-              createAt: res.data.createAt,
-            },
-          });
+        if (res.data.ZUID) {
+          zestyConfig.instance.scripts[filename] = {
+            zuid: res.data.ZUID,
+            type: res.data.type,
+            updateAt: res.data.updateAt,
+            createAt: res.data.createAt,
+          };
         }
       }
       if (fileType === "html") {
         const res = await zestySDK.instance.createView(payload);
         if (res.data.ZUID) {
-          zestyConfig.views.push({
-            filename: {
-              zuid: res.data.ZUID,
-              type: payload.fileType,
-              updateAt: res.data.updateAt,
-              createAt: res.data.createAt,
-            },
-          });
+          zestyConfig.instance.views[filename] = {
+            zuid: res.data.ZUID,
+            type: res.data.type,
+            updateAt: res.data.updateAt,
+            createAt: res.data.createAt,
+          };
         }
       }
       await writeConfig();
