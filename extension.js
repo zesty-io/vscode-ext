@@ -194,6 +194,8 @@ async function activate(context) {
     await saveFile(document);
   });
 
+  vscode.workspace.onDidDeleteFiles(async (event) => {});
+
   vscode.workspace.onDidCreateFiles(async (event) => {
     if (event.files) {
       const file = event.files[0];
