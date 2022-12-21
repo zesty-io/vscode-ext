@@ -214,12 +214,31 @@ async function activate(context) {
       if (fileType === "css" || fileType === "less" || fileType === "scss") {
         if (zestyConfig.instance.styles.hasOwnProperty(filename)) {
           const style = zestyConfig.instance.styles[filename];
-          console.log(style);
           await zestySDK.instance.deleteStylesheet(style.zuid);
           vscode.window.showInformationMessage(
             `Files has been delete and synced to the instance.`
           );
           delete zestyConfig.instance.styles[filename];
+          await writeConfig();
+        }
+      }
+
+      if (fileType === "js") {
+        if (zestyConfig.instance.scripts.hasOwnProperty(filename)) {
+          const script = zestyConfig.instance.scripts[filename];
+          await fetch(``, {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${zestyConfig.token}`,
+            },
+            body: JSON.stringify({
+              ZUID: script.zuid,
+            }),
+          });
+          vscode.window.showInformationMessage(
+            `Files has been delete and synced to the instance.`
+          );
+          delete zestyConfig.instance.scripts[filename];
           await writeConfig();
         }
       }
