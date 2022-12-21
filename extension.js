@@ -258,8 +258,9 @@ async function activate(context) {
       }
 
       if (fileType === "html") {
-        if (zestyConfig.instance.views.hasOwnProperty(filename)) {
-          const view = zestyConfig.instance.views[filename];
+        var filenameEdit = filename.replace(".html", "");
+        if (zestyConfig.instance.views.hasOwnProperty(filenameEdit)) {
+          const view = zestyConfig.instance.views[filenameEdit];
           await fetch(
             `https://${zestyConfig.instance_zuid}.api.zesty.io/v1/web/views/${view.zuid}`,
             {
@@ -269,7 +270,7 @@ async function activate(context) {
               },
             }
           );
-          delete zestyConfig.instance.views[filename];
+          delete zestyConfig.instance.views[filenameEdit];
           await writeConfig();
           vscode.window.showInformationMessage(
             `Files has been delete and synced to the instance.`
