@@ -168,6 +168,18 @@ async function saveFile(document) {
   }
 }
 
+function getFile(file) {
+  var splitPath = file.fsPath.split("\\");
+  var newSplitPath = splitPath.slice(
+    splitPath.indexOf("webengine"),
+    splitPath.length
+  );
+  if (newSplitPath[0] === "webengine") newSplitPath.shift();
+  if (["styles", "scripts", "views"].includes(newSplitPath[0]))
+    newSplitPath.shift();
+  return newSplitPath.join("/");
+}
+
 function getExtension(filename) {
   return filename.split(".").pop();
 }
@@ -194,18 +206,77 @@ async function activate(context) {
     await saveFile(document);
   });
 
+  vscode.workspace.onDidDeleteFiles(async (event) => {
+    if (event.files) {
+      const file = event.files[0];
+      var filename = getFile(file);
+      var fileType = getExtension(filename);
+      if (fileType === "css" || fileType === "less" || fileType === "scss") {
+        if (zestyConfig.instance.styles.hasOwnProperty(filename)) {
+          const style = zestyConfig.instance.styles[filename];
+          await zestySDK.instance.deleteStylesheet(style.zuid);
+          delete zestyConfig.instance.styles[filename];
+          await writeConfig();
+          vscode.window.showInformationMessage(
+            `Files has been delete and synced to the instance.`
+          );
+        }
+      }
+
+      if (fileType === "js") {
+        if (zestyConfig.instance.scripts.hasOwnProperty(filename)) {
+          const script = zestyConfig.instance.scripts[filename];
+          await fetch(
+            `https://${zestyConfig.instance_zuid}.api.zesty.io/v1/web/scripts/${script.zuid}`,
+            {
+              method: "DELETE",
+              headers: {
+                Authorization: `Bearer ${zestyConfig.token}`,
+              },
+            }
+          );
+          delete zestyConfig.instance.scripts[filename];
+          await writeConfig();
+          vscode.window.showInformationMessage(
+            `Files has been delete and synced to the instance.`
+          );
+        }
+      }
+
+      if (fileType === "html") {
+        if (zestyConfig.instance.views.hasOwnProperty(filename)) {
+          const view = zestyConfig.instance.views[filename];
+          await fetch(
+            `https://${zestyConfig.instance_zuid}.api.zesty.io/v1/web/views/${view.zuid}`,
+            {
+              method: "DELETE",
+              headers: {
+                Authorization: `Bearer ${zestyConfig.token}`,
+              },
+            }
+          );
+          delete zestyConfig.instance.views[filename];
+          await writeConfig();
+          vscode.window.showInformationMessage(
+            `Files has been delete and synced to the instance.`
+          );
+        }
+      }
+    }
+  });
+
   vscode.workspace.onDidCreateFiles(async (event) => {
     if (event.files) {
       const file = event.files[0];
-      var splitPath = file.fsPath.split("\\");
-      var newSplitPath = splitPath.slice(
-        splitPath.indexOf("webengine"),
-        splitPath.length
-      );
-      if (newSplitPath[0] === "webengine") newSplitPath.shift();
-      if (["styles", "scripts", "views"].includes(newSplitPath[0]))
-        newSplitPath.shift();
-      var filename = newSplitPath.join("/");
+      // var splitPath = file.fsPath.split("\\");
+      // var newSplitPath = splitPath.slice(
+      //   splitPath.indexOf("webengine"),
+      //   splitPath.length
+      // );
+      // if (newSplitPath[0] === "webengine") newSplitPath.shift();
+      // if (["styles", "scripts", "views"].includes(newSplitPath[0]))
+      //   newSplitPath.shift();
+      var filename = getFile(file);
       var fileType = getExtension(filename);
       var payload = {
         filename: filename,
@@ -249,7 +320,6 @@ async function activate(context) {
       if (fileType === "html") {
         payload.filename = filename.replace(".html", "");
         const res = await zestySDK.instance.createView(payload);
-        console.log(res);
         if (res.data.ZUID) {
           zestyConfig.instance.views[payload.filename] = {
             zuid: res.data.ZUID,
