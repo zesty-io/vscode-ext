@@ -125,7 +125,11 @@ async function createGitIgnore() {
   }
 }
 
-function validateToken(token) {}
+async function validateToken(token) {
+  const res = await zestySDK.auth.verifyToken(token);
+
+  return res.verified ? true : false;
+}
 
 async function saveFile(document) {
   const filePath = document.uri;
