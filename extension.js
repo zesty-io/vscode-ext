@@ -214,10 +214,13 @@ async function activate(context) {
       if (fileType === "css" || fileType === "less" || fileType === "scss") {
         if (zestyConfig.instance.styles.hasOwnProperty(filename)) {
           const style = zestyConfig.instance.styles[filename];
-          await zestySDK.instance.deleteStyle(style.ZUID);
+          console.log(style);
+          await zestySDK.instance.deleteStylesheet(style.zuid);
           vscode.window.showInformationMessage(
             `Files has been delete and synced to the instance.`
           );
+          delete zestyConfig.instance.styles[filename];
+          await writeConfig();
         }
       }
     }
