@@ -215,11 +215,11 @@ async function activate(context) {
         if (zestyConfig.instance.styles.hasOwnProperty(filename)) {
           const style = zestyConfig.instance.styles[filename];
           await zestySDK.instance.deleteStylesheet(style.zuid);
+          delete zestyConfig.instance.styles[filename];
+          await writeConfig();
           vscode.window.showInformationMessage(
             `Files has been delete and synced to the instance.`
           );
-          delete zestyConfig.instance.styles[filename];
-          await writeConfig();
         }
       }
 
@@ -235,11 +235,31 @@ async function activate(context) {
               },
             }
           );
+          delete zestyConfig.instance.scripts[filename];
+          await writeConfig();
           vscode.window.showInformationMessage(
             `Files has been delete and synced to the instance.`
           );
-          delete zestyConfig.instance.scripts[filename];
+        }
+      }
+
+      if (fileType === "html") {
+        if (zestyConfig.instance.views.hasOwnProperty(filename)) {
+          const view = zestyConfig.instance.views[filename];
+          await fetch(
+            `https://${zestyConfig.instance_zuid}.api.zesty.io/v1/web/views/${view.zuid}`,
+            {
+              method: "DELETE",
+              headers: {
+                Authorization: `Bearer ${zestyConfig.token}`,
+              },
+            }
+          );
+          delete zestyConfig.instance.views[filename];
           await writeConfig();
+          vscode.window.showInformationMessage(
+            `Files has been delete and synced to the instance.`
+          );
         }
       }
     }
