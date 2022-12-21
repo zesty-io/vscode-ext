@@ -118,6 +118,19 @@ async function writeConfig() {
   }
 }
 
+async function createGitIgnore() {
+  var path = `${basePath}/.gitignore`;
+  if (!fs.existsSync(path)) {
+    await fs.writeFileSync(path, "zesty.json");
+  }
+}
+
+async function validateToken(token) {
+  const res = await zestySDK.auth.verifyToken(token);
+
+  return res.verified ? true : false;
+}
+
 async function saveFile(document) {
   const filePath = document.uri;
   var fileBreakDown = filePath.path
@@ -199,6 +212,7 @@ async function activate(context) {
       await syncInstanceStyles();
       await syncInstanceScipts();
       await writeConfig();
+      await createGitIgnore();
     })
   );
 
