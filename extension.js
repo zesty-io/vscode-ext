@@ -226,15 +226,15 @@ async function activate(context) {
       if (fileType === "js") {
         if (zestyConfig.instance.scripts.hasOwnProperty(filename)) {
           const script = zestyConfig.instance.scripts[filename];
-          await fetch(``, {
-            method: "DELETE",
-            headers: {
-              Authorization: `Bearer ${zestyConfig.token}`,
-            },
-            body: JSON.stringify({
-              ZUID: script.zuid,
-            }),
-          });
+          await fetch(
+            `https://${zestyConfig.instance_zuid}.api.zesty.io/v1/web/scripts/${script.zuid}`,
+            {
+              method: "DELETE",
+              headers: {
+                Authorization: `Bearer ${zestyConfig.token}`,
+              },
+            }
+          );
           vscode.window.showInformationMessage(
             `Files has been delete and synced to the instance.`
           );
