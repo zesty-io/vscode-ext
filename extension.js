@@ -168,6 +168,18 @@ async function saveFile(document) {
   }
 }
 
+function getFile(file) {
+  var splitPath = file.fsPath.split("\\");
+  var newSplitPath = splitPath.slice(
+    splitPath.indexOf("webengine"),
+    splitPath.length
+  );
+  if (newSplitPath[0] === "webengine") newSplitPath.shift();
+  if (["styles", "scripts", "views"].includes(newSplitPath[0]))
+    newSplitPath.shift();
+  return newSplitPath.join("/");
+}
+
 function getExtension(filename) {
   return filename.split(".").pop();
 }
@@ -194,20 +206,22 @@ async function activate(context) {
     await saveFile(document);
   });
 
-  vscode.workspace.onDidDeleteFiles(async (event) => {});
+  vscode.workspace.onDidDeleteFiles(async (event) => {
+    console.log(event);
+  });
 
   vscode.workspace.onDidCreateFiles(async (event) => {
     if (event.files) {
       const file = event.files[0];
-      var splitPath = file.fsPath.split("\\");
-      var newSplitPath = splitPath.slice(
-        splitPath.indexOf("webengine"),
-        splitPath.length
-      );
-      if (newSplitPath[0] === "webengine") newSplitPath.shift();
-      if (["styles", "scripts", "views"].includes(newSplitPath[0]))
-        newSplitPath.shift();
-      var filename = newSplitPath.join("/");
+      // var splitPath = file.fsPath.split("\\");
+      // var newSplitPath = splitPath.slice(
+      //   splitPath.indexOf("webengine"),
+      //   splitPath.length
+      // );
+      // if (newSplitPath[0] === "webengine") newSplitPath.shift();
+      // if (["styles", "scripts", "views"].includes(newSplitPath[0]))
+      //   newSplitPath.shift();
+      var filename = getFile(file);
       var fileType = getExtension(filename);
       var payload = {
         filename: filename,
@@ -251,7 +265,6 @@ async function activate(context) {
       if (fileType === "html") {
         payload.filename = filename.replace(".html", "");
         const res = await zestySDK.instance.createView(payload);
-        console.log(res);
         if (res.data.ZUID) {
           zestyConfig.instance.views[payload.filename] = {
             zuid: res.data.ZUID,
