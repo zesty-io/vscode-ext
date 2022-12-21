@@ -207,7 +207,20 @@ async function activate(context) {
   });
 
   vscode.workspace.onDidDeleteFiles(async (event) => {
-    console.log(event);
+    if (event.files) {
+      const file = event.files[0];
+      var filename = getFile(file);
+      var fileType = getExtension(filename);
+      if (fileType === "css" || fileType === "less" || fileType === "scss") {
+        if (zestyConfig.instance.styles.hasOwnProperty(filename)) {
+          const style = zestyConfig.instance.styles[filename];
+          await zestySDK.instance.deleteStyle(style.ZUID);
+          vscode.window.showInformationMessage(
+            `Files has been delete and synced to the instance.`
+          );
+        }
+      }
+    }
   });
 
   vscode.workspace.onDidCreateFiles(async (event) => {
