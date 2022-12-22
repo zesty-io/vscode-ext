@@ -125,6 +125,21 @@ async function createGitIgnore() {
   }
 }
 
+function isFileSaveSyncEnabled() {
+  const fileSaveConfig = vscode.workspace
+    .getConfiguration("zesty.editor")
+    .get("syncFileOnSave");
+  return fileSaveConfig;
+}
+
+function isFileDeleteSyncEnabled() {
+  const fileDeleteConfig = vscode.workspace
+    .getConfiguration("zesty.editor")
+    .get("syncFileOnDelete");
+
+  return fileDeleteConfig;
+}
+
 async function validateToken(token) {
   const res = await zestySDK.auth.verifyToken(token);
 
@@ -217,10 +232,12 @@ async function activate(context) {
   );
 
   vscode.workspace.onDidSaveTextDocument(async (document) => {
+    if (!isFileSaveSyncEnabled()) return;
     await saveFile(document);
   });
 
   vscode.workspace.onDidDeleteFiles(async (event) => {
+    if (!isFileDeleteSyncEnabled()) return;
     if (event.files) {
       const file = event.files[0];
       var filename = getFile(file);
@@ -283,14 +300,6 @@ async function activate(context) {
   vscode.workspace.onDidCreateFiles(async (event) => {
     if (event.files) {
       const file = event.files[0];
-      // var splitPath = file.fsPath.split("\\");
-      // var newSplitPath = splitPath.slice(
-      //   splitPath.indexOf("webengine"),
-      //   splitPath.length
-      // );
-      // if (newSplitPath[0] === "webengine") newSplitPath.shift();
-      // if (["styles", "scripts", "views"].includes(newSplitPath[0]))
-      //   newSplitPath.shift();
       var filename = getFile(file);
       var fileType = getExtension(filename);
       var payload = {
