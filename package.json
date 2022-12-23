@@ -12,16 +12,33 @@
   "activationEvents": [
     "*"
   ],
-  "main": "./extension.js",
+  "main": "./src/extension.js",
   "contributes": {
+    "configuration": {
+      "id": "zestyEditor",
+      "title": "Zesty",
+      "properties": {
+        "zesty.editor.token": {
+          "type": "string",
+          "default": "",
+          "description": "Developer Token"
+        },
+        "zesty.editor.syncFileOnSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Auto sync file to the instance when saved."
+        },
+        "zesty.editor.syncFileOnDelete": {
+          "type": "boolean",
+          "default": true,
+          "description": "Auto sync deleted files to the instance."
+        }
+      }
+    },
     "commands": [
       {
         "command": "zesty-vscode-extension.run",
         "title": "Run Extension"
-      },
-      {
-        "command": "zesty-vscode-extension.saveFile",
-        "title": "Save File"
       }
     ]
   },
