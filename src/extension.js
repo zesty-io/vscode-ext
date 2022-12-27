@@ -14,7 +14,7 @@ const fetch = require("node-fetch");
  * @param {vscode.ExtensionContext} context
  */
 
-var zestyPackageConfig = "zesty.json";
+var zestyPackageConfig = "zesty.config.json";
 var zestySDK = null;
 var basePath = "";
 var folders = [
