@@ -160,6 +160,8 @@ async function saveFile(document) {
   if (document.languageId === "html")
     fileBreakDown[1] = fileBreakDown[1].replace(".html", "");
 
+  if (!zestyConfig.instance.hasOwnProperty(fileBreakDown[0])) return;
+
   const fileZuid = zestyConfig.instance[fileBreakDown[0]][fileBreakDown[1]];
   const code = document.getText();
 
