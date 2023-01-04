@@ -1,65 +1,50 @@
-# zesty-vscode-extension README
+## Getting Started
 
-This is the README for your extension "zesty-vscode-extension". After writing up a brief description, we recommend including the following sections.
+- Create `zesty.config.json` on your root folder and add your target instance zuid.
 
-## Features
+```json
+{
+  "instance_zuid": "YOUR INSTANCE ZUID"
+}
+```
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
-
-For example if there is an image subfolder under your extension project workspace:
-
-\!\[feature X\]\(images/feature-x.png\)
-
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+- Right click the `zesty.config.json` then select `Sync to Instance`
+- Input your developer token then press enter.
+- it will automatically sync all the files from instance including views, styles and js.
 
 ## Requirements
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+- Zesty account is require. create your account at https://www.zesty.io/join/
 
 ## Extension Settings
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
-
-For example:
-
 This extension contributes the following settings:
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+- `zesty.editor.token` : Store developer token from the account.
+- `zesty.editor.syncFileOnSave` : Default to `true`. Automatically sync save to cloud instance.
+- `zesty.editor.syncFileOnDelete` : Default to `true`. Automatically sync file deletion to clound instance.
 
 ## Known Issues
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+Submit issues on github https://github.com/zesty-io/vscode-ext/issues
 
 ## Release Notes
 
-Users appreciate release notes as you update your extension.
+### 0.0.1
 
-### 1.0.0
+Phase 1 Release
 
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
-
----
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code.  Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux)
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux)
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+- Zesty Plugin will be available on VSCode Extension Store.
+- Configuration will be needed to synchronize your codebase to zesty instance.
+- Configuration will match the Next.js configuration file.
+- Files will be stored to webengine folder, with option to change the folder name to change the folder root, to match the atom plugin behavior .
+- Files will sync down with command in VSCode.
+- New files will be created and sync to zesty project.
+- Files by default will automatically save on save, with an option to sync with a VS Code command, with an option to turn off synchronization on save. (maybe)
+- Deleting file synchronization can be turn off. Notification should prompt before deletion.
+- Options will be stored on a .vscode configuration file.
+- Vscode will be a opensource codebase on github. https://github.com/zesty-io/vscode-ext
+- Submit feature requests https://github.com/zesty-io/vscode-ext/issues/new/choose
+- Submit bugs https://github.com/zesty-io/vscode-ext/issues/new/choose
+- Command for zesty init will create a shell zesty.json config file.
+- Sneak peak video https://www.youtube.com/watch?v=2pCqhK9iy2E
