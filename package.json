@@ -38,7 +38,7 @@
     "commands": [
       {
         "command": "zesty-vscode-extension.run",
-        "title": "Sync Zesty Files"
+        "title": "Sync to Instance"
       }
     ],
     "menus": {

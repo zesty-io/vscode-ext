@@ -145,11 +145,6 @@ function getDeveloperToken() {
   return token;
 }
 
-async function validateToken(token) {
-  const res = await zestySDK.auth.verifyToken(token);
-  return res.verified ? true : false;
-}
-
 async function saveFile(document) {
   const filePath = document.uri;
   var fileBreakDown = filePath.path
@@ -227,9 +222,22 @@ function loadConfig() {
   }
 }
 
+async function validateToken() {
+  const auth = sdk.Auth();
+  token = getDeveloperToken();
+
+  if (token === "") {
+    vscode.window.showErrorMessage(
+      "Cannot find `instance_zuid` on the config file."
+    );
+  }
+}
+
 async function activate(context) {
   basePath = vscode.workspace.workspaceFolders[0].uri.fsPath;
   loadConfig();
+  token = getDeveloperToken();
+  if (token !== "") zestySDK = new sdk(zestyConfig.instance_zuid, token);
 
   context.subscriptions.push(
     vscode.commands.registerCommand("zesty-vscode-extension.run", async () => {
@@ -256,7 +264,6 @@ async function activate(context) {
         const configuration = vscode.workspace.getConfiguration("zesty.editor");
         await configuration.update("token", devToken);
         token = devToken;
-        zestySDK = new sdk(zestyConfig.instance_zuid, token);
       }
 
       zestySDK = new sdk(zestyConfig.instance_zuid, token);
