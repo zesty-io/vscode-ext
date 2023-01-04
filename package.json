@@ -38,9 +38,18 @@
     "commands": [
       {
         "command": "zesty-vscode-extension.run",
-        "title": "Run Extension"
+        "title": "Sync Zesty Files"
       }
-    ]
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "when": "resourceFilename  == zesty.config.json",
+          "command": "zesty-vscode-extension.run",
+          "group": "zestyio-menu@1"
+        }
+      ]
+    }
   },
   "scripts": {
     "lint": "eslint .",
