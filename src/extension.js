@@ -145,12 +145,6 @@ function getDeveloperToken() {
   return token;
 }
 
-async function validateToken(token) {
-  const res = await zestySDK.auth.verifyToken(token);
-
-  return res.verified ? true : false;
-}
-
 async function saveFile(document) {
   const filePath = document.uri;
   var fileBreakDown = filePath.path
@@ -219,12 +213,43 @@ function getExtension(filename) {
   return filename.split(".").pop();
 }
 
+function loadConfig() {
+  var path = `${basePath}/${zestyPackageConfig}`;
+  if (fs.existsSync(path)) {
+    const zestyData = readConfig(`${basePath}/${zestyPackageConfig}`, "JSON");
+    zestyConfig = zestyData;
+    if (!zestyData.hasOwnProperty("instance")) zestyConfig.instance = {};
+  }
+}
+
+async function validateToken() {
+  const auth = sdk.Auth();
+  token = getDeveloperToken();
+
+  if (token === "") {
+    vscode.window.showErrorMessage(
+      "Cannot find `instance_zuid` on the config file."
+    );
+  }
+}
+
 async function activate(context) {
+  basePath = vscode.workspace.workspaceFolders[0].uri.fsPath;
+  loadConfig();
+  token = getDeveloperToken();
+  if (token !== "") zestySDK = new sdk(zestyConfig.instance_zuid, token);
+
   context.subscriptions.push(
     vscode.commands.registerCommand("zesty-vscode-extension.run", async () => {
-      basePath = vscode.workspace.workspaceFolders[0].uri.fsPath;
-
+      loadConfig();
+      if (!zestyConfig.hasOwnProperty("instance_zuid")) {
+        vscode.window.showErrorMessage(
+          "Cannot find `instance_zuid` on the config file."
+        );
+        return;
+      }
       token = getDeveloperToken();
+
       if (token === "") {
         const devToken = await vscode.window.showInputBox({
           value: "",
@@ -232,7 +257,7 @@ async function activate(context) {
         });
         if (devToken === "" || devToken === undefined) {
           vscode.window.showErrorMessage(
-            "Instance ZUID is required to proceed."
+            "Developer Token is required to proceed."
           );
           return;
         }
@@ -240,29 +265,6 @@ async function activate(context) {
         await configuration.update("token", devToken);
         token = devToken;
       }
-
-      if (!fs.existsSync(`${basePath}/${zestyPackageConfig}`)) {
-        const zuid = await vscode.window.showInputBox({
-          value: "",
-          placeHolder: "Please Enter your INSTANCE ZUID",
-        });
-
-        if (zuid === "" || zuid === undefined) {
-          vscode.window.showErrorMessage(
-            "Instance ZUID is required to proceed."
-          );
-          return;
-        }
-        const contentZuid = { instance_zuid: zuid };
-        fs.writeFileSync(
-          `${basePath}/${zestyPackageConfig}`,
-          JSON.stringify(contentZuid, null, 4)
-        );
-      }
-
-      const zestyData = readConfig(`${basePath}/${zestyPackageConfig}`, "JSON");
-      zestyConfig = zestyData;
-      if (!zestyData.hasOwnProperty("instance")) zestyConfig.instance = {};
 
       zestySDK = new sdk(zestyConfig.instance_zuid, token);
 
