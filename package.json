@@ -1,6 +1,8 @@
 {
   "name": "zesty-vscode-extension",
-  "displayName": "zesty-vscode-extension",
+  "displayName": "Zesty.io VSCode Extension",
+  "repository": "https://github.com/zesty-io/vscode-ext",
+  "publisher": "zesty-io",
   "description": "",
   "version": "0.0.1",
   "engines": {
