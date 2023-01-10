@@ -16,11 +16,11 @@ mkdir mydomain.com
 
 - Right click the `zesty.config.json` then click `Sync to Instance`
 - Input your developer token then press enter.
-  a.) Since there's is no interactive login to refresh the stale token, you need to manually omit once the token expires.
-  b.) Update token through settings.json or use command _ctlr + shift + p_ and search for _Open Setting (UI)_.
-  c.) On _Workspace_ tab, click _Extension_ then select _Zesty_. All zesty settings will appear, input your token on the _Developer Token_ field.
-  d.) Right Click `zesty.config.json` then select `Sync to Instance`.
-- it will automatically sync all the files from instance including views, styles and js.
+  > a.) Since there's is no interactive login to refresh the stale token, you need to manually omit once the token expires.
+  > b.) Update token through settings.json or use command _ctlr + shift + p_ and search for _Open Setting (UI)_.
+  > c.) On _Workspace_ tab, click _Extension_ then select _Zesty_. All zesty settings will appear, input your token on the _Developer Token_ field.
+  > d.) Right Click `zesty.config.json` then select `Sync to Instance`.
+- Instance files including view, scripts and stylesheet will sync and copied to your local machine..
 
 ## Functionality Notes
 
@@ -29,6 +29,7 @@ mkdir mydomain.com
 - Javascript and CSS files can be created remotely from the local project, and will be synced to the cloud instance
 - Stylesheets and javascript compile in the cloud on save (SASS, SCSS, LESS supported)
 - Custom endpoints for xml,json, html, etc. can be created by making a new file in your views folder with an extension
+- Adjustment on file under _webengine_ folder will automatically sync to the instance.
 
 ## Requirements
 
