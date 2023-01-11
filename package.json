@@ -43,6 +43,12 @@
         "title": "Sync to Instance"
       }
     ],
+    "keybindings": [
+      {
+        "command": "zesty-vscode-extension.run",
+        "key": "ctrl+alt+i"
+      }
+    ],
     "menus": {
       "explorer/context": [
         {
