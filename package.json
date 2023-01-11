@@ -12,7 +12,7 @@
     "Other"
   ],
   "activationEvents": [
-    "*"
+    "workspaceContains:zesty.config.json"
   ],
   "main": "./src/extension.js",
   "contributes": {
