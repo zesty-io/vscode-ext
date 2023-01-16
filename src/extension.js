@@ -151,6 +151,7 @@ function getDeveloperToken() {
 }
 
 async function saveFile(document) {
+  if(!findConfig()) return;
   const filePath = document.uri;
   var fileBreakDown = filePath.path
     .split("/")
@@ -285,23 +286,66 @@ async function activate(context) {
   });
 
   vscode.workspace.onDidDeleteFiles(async (event) => {
+    if(!findConfig()) return;
     if (!isFileDeleteSyncEnabled()) return;
     if (event.files) {
       const file = event.files[0];
       var filename = getFile(file);
       var fileType = getExtension(filename);
 
-      
-      if (fileType === "css" || fileType === "less" || fileType === "scss") {
-        if (zestyConfig.instance.styles.hasOwnProperty(filename)) {
-          const style = zestyConfig.instance.styles[filename];
-          await zestySDK.instance.deleteStylesheet(style.zuid);
-          delete zestyConfig.instance.styles[filename];
-          await writeConfig();
-          vscode.window.showInformationMessage(
-            `Files has been delete and synced to the instance.`
-          );
-        }
+      switch(fileType){
+        case "css" :
+        case "less" :
+        case "scss" :
+          if (zestyConfig.instance.styles.hasOwnProperty(filename)) {
+            const style = zestyConfig.instance.styles[filename];
+            await zestySDK.instance.deleteStylesheet(style.zuid);
+            delete zestyConfig.instance.styles[filename];
+            await writeConfig();
+            vscode.window.showInformationMessage(
+              `Files has been delete and synced to the instance.`
+            );
+          }
+          break;
+        case "js" :
+          if (zestyConfig.instance.scripts.hasOwnProperty(filename)) {
+            const script = zestyConfig.instance.scripts[filename];
+            await fetch(
+              `https://${zestyConfig.instance_zuid}.api.zesty.io/v1/web/scripts/${script.zuid}`,
+              {
+                method: "DELETE",
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              }
+            );
+            delete zestyConfig.instance.scripts[filename];
+            await writeConfig();
+            vscode.window.showInformationMessage(
+              `Files has been delete and synced to the instance.`
+            );
+          }
+          break;
+        default :
+          var filenameEdit = fileType === undefined ? filename : `/${filename}`;
+          if (zestyConfig.instance.views.hasOwnProperty(filenameEdit)) {
+            const view = zestyConfig.instance.views[filenameEdit];
+            await fetch(
+              `https://${zestyConfig.instance_zuid}.api.zesty.io/v1/web/views/${view.zuid}`,
+              {
+                method: "DELETE",
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              }
+            );
+            delete zestyConfig.instance.views[filenameEdit];
+            await writeConfig();
+            vscode.window.showInformationMessage(
+              `Files has been delete and synced to the instance.`
+            );
+          }
+          break;
       }
 
       if (fileType === "js") {
@@ -317,27 +361,6 @@ async function activate(context) {
             }
           );
           delete zestyConfig.instance.scripts[filename];
-          await writeConfig();
-          vscode.window.showInformationMessage(
-            `Files has been delete and synced to the instance.`
-          );
-        }
-      }
-
-      if (fileType === "html") {
-        var filenameEdit = filename.replace(".html", "");
-        if (zestyConfig.instance.views.hasOwnProperty(filenameEdit)) {
-          const view = zestyConfig.instance.views[filenameEdit];
-          await fetch(
-            `https://${zestyConfig.instance_zuid}.api.zesty.io/v1/web/views/${view.zuid}`,
-            {
-              method: "DELETE",
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            }
-          );
-          delete zestyConfig.instance.views[filenameEdit];
           await writeConfig();
           vscode.window.showInformationMessage(
             `Files has been delete and synced to the instance.`
