@@ -373,7 +373,7 @@ async function activate(context) {
               createdAt: resStyle.data.createdAt,
             };
             vscode.window.showInformationMessage(
-              `Files has been synced to instance.`
+              `Saving stylesheet to ${resStyle.data.ZUID}.`
             );
           }
           break;
@@ -398,7 +398,7 @@ async function activate(context) {
               createdAt: resScript.data.createdAt,
             };
             vscode.window.showInformationMessage(
-              `Files has been synced to instance.`
+              `Saving script to ${resScript.data.ZUID}.`
             );
           }
           break;
@@ -413,7 +413,7 @@ async function activate(context) {
               createdAt: resSnippet.data.createdAt,
             };
             vscode.window.showInformationMessage(
-              `Files has been synced to instance.`
+              `Saving file to ${resSnippet.data.ZUID}.`
             );
           }
           break;
@@ -427,7 +427,7 @@ async function activate(context) {
               createdAt: resCustom.data.createdAt,
             }
             vscode.window.showInformationMessage(
-              `Files has been synced to instance.`
+              `Saving file to ${resCustom.data.ZUID}.`
             );
           }
           break
