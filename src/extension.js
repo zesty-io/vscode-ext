@@ -163,40 +163,48 @@ async function saveFile(document) {
   const code = document.getText();
 
   if (fileZuid) {
-    if (fileBreakDown[0] === "views") {
-      await zestySDK.instance.updateView(fileZuid.zuid, {
-        code: code,
-      });
+    switch(fileBreakDown[0]){
+      case "views":
+        await zestySDK.instance.updateView(fileZuid.zuid, {
+          code: code,
+        });
+        vscode.window.showInformationMessage(
+          `ZUID : ${fileZuid.zuid} has been updated and sync.`
+        );
+        break;
+      case "styles":
+        await zestySDK.instance.updateView(fileZuid.zuid, {
+          code: code,
+        });
+        vscode.window.showInformationMessage(
+          `ZUID : ${fileZuid.zuid} has been updated and sync.`
+        );
+        break;
+      case "scripts" : 
+        await fetch(
+          `https://${zestyConfig.instance_zuid}.api.zesty.io/v1/web/scripts/${fileZuid.zuid}`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              filename: fileBreakDown[1],
+              code: code,
+              type: fileZuid.type,
+            }),
+          }
+        );
+        vscode.window.showInformationMessage(
+          `ZUID : ${fileZuid.zuid} has been updated and sync.`
+        );
+        break;
+      default :
+        vscode.window.showErrorMessage(
+          `Cannot find file`
+        );
     }
-
-    if (fileBreakDown[0] === "styles") {
-      await zestySDK.instance.updateStylesheet(fileZuid.zuid, {
-        filename: fileBreakDown[1],
-        type: fileZuid.type,
-        code: code,
-      });
-    }
-    if (fileBreakDown[0] === "scripts") {
-      await fetch(
-        `https://${zestyConfig.instance_zuid}.api.zesty.io/v1/web/scripts/${fileZuid.zuid}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            filename: fileBreakDown[1],
-            code: code,
-            type: fileZuid.type,
-          }),
-        }
-      );
-    }
-
-    vscode.window.showInformationMessage(
-      `ZUID : ${fileZuid.zuid} has been updated and sync.`
-    );
   }
 }
 
@@ -346,26 +354,6 @@ async function activate(context) {
             );
           }
           break;
-      }
-
-      if (fileType === "js") {
-        if (zestyConfig.instance.scripts.hasOwnProperty(filename)) {
-          const script = zestyConfig.instance.scripts[filename];
-          await fetch(
-            `https://${zestyConfig.instance_zuid}.api.zesty.io/v1/web/scripts/${script.zuid}`,
-            {
-              method: "DELETE",
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            }
-          );
-          delete zestyConfig.instance.scripts[filename];
-          await writeConfig();
-          vscode.window.showInformationMessage(
-            `Files has been delete and synced to the instance.`
-          );
-        }
       }
     }
   });
