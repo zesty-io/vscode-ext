@@ -12,7 +12,7 @@
     "Other"
   ],
   "activationEvents": [
-    "*"
+    "workspaceContains:zesty.config.json"
   ],
   "main": "./src/extension.js",
   "contributes": {
@@ -41,6 +41,12 @@
       {
         "command": "zesty-vscode-extension.run",
         "title": "Sync to Instance"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "zesty-vscode-extension.run",
+        "key": "ctrl+alt+i"
       }
     ],
     "menus": {
