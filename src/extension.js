@@ -35,9 +35,9 @@ function makeFolders(folders) {
   folders.forEach((folder) => makeDir(basePath + folder));
 }
 
-function findConfig(){
-  const pathConfig  = `${basePath}/${zestyPackageConfig}`;
-  return fs.existsSync(pathConfig) && fs.existsSync()
+function findConfig() {
+  const pathConfig = `${basePath}/${zestyPackageConfig}`;
+  return fs.existsSync(pathConfig);
 }
 
 function makeFileSync(type, filename, content) {
@@ -150,8 +150,23 @@ function getDeveloperToken() {
   return token;
 }
 
+async function request(url, method, payload) {
+  var opts = {
+    method: method,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  };
+
+  if (method !== "GET") opts.body = JSON.stringify(payload);
+
+  const res = await fetch(url, opts);
+  return res.json();
+}
+
 async function saveFile(document) {
-  if(!findConfig()) return;
+  if (!findConfig()) return;
   const filePath = document.uri;
   var fileBreakDown = filePath.path
     .split("/")
@@ -161,49 +176,62 @@ async function saveFile(document) {
 
   const fileZuid = zestyConfig.instance[fileBreakDown[0]][fileBreakDown[1]];
   const code = document.getText();
+  const payload = {
+    filename: fileBreakDown[1],
+    code: code || " ",
+    type: fileZuid.type,
+  };
 
   if (fileZuid) {
-    switch(fileBreakDown[0]){
+    switch (fileBreakDown[0]) {
       case "views":
-        await zestySDK.instance.updateView(fileZuid.zuid, {
-          code: code,
+        const updateView = await zestySDK.instance.updateView(fileZuid.zuid, {
+          code: payload.code,
         });
+
+        if (updateView.error) {
+          vscode.window.showErrorMessage(
+            `Script cannot sync to ${fileZuid.zuid}. Error : ${updateView.error}`
+          );
+          return;
+        }
         vscode.window.showInformationMessage(
           `ZUID : ${fileZuid.zuid} has been updated and sync.`
         );
         break;
       case "styles":
-        await zestySDK.instance.updateView(fileZuid.zuid, {
-          code: code,
-        });
+        const updateStyle = await zestySDK.instance.updateStylesheet(
+          fileZuid.zuid,
+          payload
+        );
+        if (updateStyle.error) {
+          vscode.window.showErrorMessage(
+            `Stylesheet cannot sync to ${fileZuid.zuid}. Error : ${updateStyle.error}.`
+          );
+          return;
+        }
         vscode.window.showInformationMessage(
           `ZUID : ${fileZuid.zuid} has been updated and sync.`
         );
         break;
-      case "scripts" : 
-        await fetch(
+      case "scripts":
+        const updateScript = await request(
           `https://${zestyConfig.instance_zuid}.api.zesty.io/v1/web/scripts/${fileZuid.zuid}`,
-          {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              filename: fileBreakDown[1],
-              code: code,
-              type: fileZuid.type,
-            }),
-          }
+          "PUT",
+          payload
         );
+        if (updateScript.error) {
+          vscode.window.showErrorMessage(
+            `Stylesheet cannot sync to ${fileZuid.zuid}. Error : ${updateScript.error}.`
+          );
+          return;
+        }
         vscode.window.showInformationMessage(
           `ZUID : ${fileZuid.zuid} has been updated and sync.`
         );
         break;
-      default :
-        vscode.window.showErrorMessage(
-          `Cannot find file`
-        );
+      default:
+        vscode.window.showErrorMessage(`Cannot find file`);
     }
   }
 }
@@ -221,7 +249,8 @@ function getFile(file) {
 }
 
 function getExtension(filename) {
-  return (/[.]/.exec(filename)) ? /[^.]+$/.exec(filename) : undefined;
+  var ext = /[^.]+$/.exec(filename);
+  return /[.]/.exec(filename) ? ext[0] : undefined;
 }
 
 function loadConfig() {
@@ -294,17 +323,17 @@ async function activate(context) {
   });
 
   vscode.workspace.onDidDeleteFiles(async (event) => {
-    if(!findConfig()) return;
+    if (!findConfig()) return;
     if (!isFileDeleteSyncEnabled()) return;
     if (event.files) {
       const file = event.files[0];
       var filename = getFile(file);
       var fileType = getExtension(filename);
 
-      switch(fileType){
-        case "css" :
-        case "less" :
-        case "scss" :
+      switch (fileType) {
+        case "css":
+        case "less":
+        case "scss":
           if (zestyConfig.instance.styles.hasOwnProperty(filename)) {
             const style = zestyConfig.instance.styles[filename];
             await zestySDK.instance.deleteStylesheet(style.zuid);
@@ -315,7 +344,7 @@ async function activate(context) {
             );
           }
           break;
-        case "js" :
+        case "js":
           if (zestyConfig.instance.scripts.hasOwnProperty(filename)) {
             const script = zestyConfig.instance.scripts[filename];
             await fetch(
@@ -334,7 +363,7 @@ async function activate(context) {
             );
           }
           break;
-        default :
+        default:
           var filenameEdit = fileType === undefined ? filename : `/${filename}`;
           if (zestyConfig.instance.views.hasOwnProperty(filenameEdit)) {
             const view = zestyConfig.instance.views[filenameEdit];
@@ -359,7 +388,7 @@ async function activate(context) {
   });
 
   vscode.workspace.onDidCreateFiles(async (event) => {
-    if(!findConfig()) return
+    // if(!findConfig()) return;
     if (event.files) {
       const file = event.files[0];
       var filename = getFile(file);
@@ -370,10 +399,10 @@ async function activate(context) {
         code: " ",
       };
 
-      switch(fileType){
-        case "css" : 
-        case "less" : 
-        case "scss" :
+      switch (fileType) {
+        case "css":
+        case "less":
+        case "scss":
           payload.type = `text/${fileType}`;
           var resStyle = await zestySDK.instance.createStylesheet(payload);
           if (!resStyle.error) {
@@ -388,19 +417,20 @@ async function activate(context) {
             );
           }
           break;
-        case "js" :
+        case "js":
           payload.type = "text/javascript";
           var result = await fetch(
             `https://${zestyConfig.instance_zuid}.api.zesty.io/v1/web/scripts`,
             {
               method: "POST",
               headers: {
-                Authorization: `Bearer ${zestyConfig.token}`,
+                Authorization: `Bearer ${token}`,
               },
               body: JSON.stringify(payload),
             }
           );
           var resScript = await result.json();
+          console.log(resScript);
           if (!resScript.error) {
             zestyConfig.instance.scripts[filename] = {
               zuid: resScript.data.ZUID,
@@ -413,7 +443,7 @@ async function activate(context) {
             );
           }
           break;
-        case undefined :
+        case undefined:
           // payload.filename = filename.replace(".html", "");
           payload.type = "snippet";
           var resSnippet = await zestySDK.instance.createView(payload);
@@ -428,21 +458,20 @@ async function activate(context) {
             );
           }
           break;
-        default :
-          payload.filename = `/${payload.filename}`
-          var resCustom = await zestySDK.instance.createView(payload)
-          if(!resCustom.error){
+        default:
+          payload.filename = `/${payload.filename}`;
+          var resCustom = await zestySDK.instance.createView(payload);
+          if (!resCustom.error) {
             zestyConfig.instance.views[payload.filename] = {
               zuid: resCustom.data.ZUID,
               updatedAt: resCustom.data.updatedAt,
               createdAt: resCustom.data.createdAt,
-            }
+            };
             vscode.window.showInformationMessage(
               `Saving file to ${resCustom.data.ZUID}.`
             );
           }
-          break
-          
+          break;
       }
       await writeConfig();
     }
