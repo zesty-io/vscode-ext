@@ -46,10 +46,8 @@ function makeFileSync(type, filename, content) {
   if (type === "style") file += `${folders[2]}/${filename}`;
   if (type === "script") file += `${folders[3]}/${filename}`;
   if (type === "config") file += `${filename}`;
-  if (!fs.existsSync(file)) {
-    makeDir(path.dirname(file));
-    fs.writeFileSync(file, content);
-  }
+  makeDir(path.dirname(file));
+  fs.writeFileSync(file, content);
 }
 
 async function syncInstanceView() {
@@ -165,16 +163,31 @@ async function request(url, method, payload) {
   return res.json();
 }
 
+function getFileDetails(file) {
+  var fileArray = file.split("/");
+  fileArray.splice(0, fileArray.indexOf("webengine"));
+  var baseDir = fileArray.shift();
+  var type = fileArray.shift();
+  var extension = getExtension(filename);
+  var filename = fileArray.join("/");
+
+  if (extension === undefined && fileArray)
+    return {
+      filename,
+      baseDir,
+      type,
+      extension,
+    };
+}
+
 async function saveFile(document) {
   if (!findConfig()) return;
-  const filePath = document.uri;
-  var fileBreakDown = filePath.path
-    .split("/")
-    .splice(Math.max(filePath.path.split("/").length - 2, 0));
 
-  if (!zestyConfig.instance.hasOwnProperty(fileBreakDown[0])) return;
+  const file = getFileDetails(document.uri.path);
 
-  const fileZuid = zestyConfig.instance[fileBreakDown[0]][fileBreakDown[1]];
+  if (!zestyConfig.instance.hasOwnProperty(file.type)) return;
+
+  const fileZuid = zestyConfig.instance[file.type][file.filename];
   const code = document.getText();
   const payload = {
     filename: fileBreakDown[1],
@@ -262,6 +275,10 @@ function loadConfig() {
   }
 }
 
+function isDirectory(path) {
+  return fs.lstatSync(path).isDirectory();
+}
+
 async function validateToken() {
   const auth = sdk.Auth();
   token = getDeveloperToken();
@@ -309,9 +326,10 @@ async function activate(context) {
       zestySDK = new sdk(zestyConfig.instance_zuid, token);
 
       await makeFolders(folders);
-      await syncInstanceView();
+
       await syncInstanceStyles();
       await syncInstanceScipts();
+      await syncInstanceView();
       await writeConfig();
       await createGitIgnore();
     })
@@ -347,14 +365,10 @@ async function activate(context) {
         case "js":
           if (zestyConfig.instance.scripts.hasOwnProperty(filename)) {
             const script = zestyConfig.instance.scripts[filename];
-            await fetch(
+            await request(
               `https://${zestyConfig.instance_zuid}.api.zesty.io/v1/web/scripts/${script.zuid}`,
-              {
-                method: "DELETE",
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                },
-              }
+              "DELETE",
+              {}
             );
             delete zestyConfig.instance.scripts[filename];
             await writeConfig();
@@ -367,14 +381,10 @@ async function activate(context) {
           var filenameEdit = fileType === undefined ? filename : `/${filename}`;
           if (zestyConfig.instance.views.hasOwnProperty(filenameEdit)) {
             const view = zestyConfig.instance.views[filenameEdit];
-            await fetch(
+            await request(
               `https://${zestyConfig.instance_zuid}.api.zesty.io/v1/web/views/${view.zuid}`,
-              {
-                method: "DELETE",
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                },
-              }
+              "DELETE",
+              {}
             );
             delete zestyConfig.instance.views[filenameEdit];
             await writeConfig();
@@ -388,9 +398,10 @@ async function activate(context) {
   });
 
   vscode.workspace.onDidCreateFiles(async (event) => {
-    // if(!findConfig()) return;
+    if (!findConfig()) return;
     if (event.files) {
       const file = event.files[0];
+      if (isDirectory(file.fsPath)) return;
       var filename = getFile(file);
       var fileType = getExtension(filename);
       var payload = {
@@ -412,6 +423,7 @@ async function activate(context) {
               updatedAt: resStyle.data.updatedAt,
               createdAt: resStyle.data.createdAt,
             };
+            await writeConfig();
             vscode.window.showInformationMessage(
               `Saving stylesheet to ${resStyle.data.ZUID}.`
             );
@@ -419,18 +431,11 @@ async function activate(context) {
           break;
         case "js":
           payload.type = "text/javascript";
-          var result = await fetch(
+          var resScript = await request(
             `https://${zestyConfig.instance_zuid}.api.zesty.io/v1/web/scripts`,
-            {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-              body: JSON.stringify(payload),
-            }
+            "POST",
+            payload
           );
-          var resScript = await result.json();
-          console.log(resScript);
           if (!resScript.error) {
             zestyConfig.instance.scripts[filename] = {
               zuid: resScript.data.ZUID,
@@ -438,6 +443,7 @@ async function activate(context) {
               updatedAt: resScript.data.updatedAt,
               createdAt: resScript.data.createdAt,
             };
+            await writeConfig();
             vscode.window.showInformationMessage(
               `Saving script to ${resScript.data.ZUID}.`
             );
@@ -453,6 +459,7 @@ async function activate(context) {
               updatedAt: resSnippet.data.updatedAt,
               createdAt: resSnippet.data.createdAt,
             };
+            await writeConfig();
             vscode.window.showInformationMessage(
               `Saving file to ${resSnippet.data.ZUID}.`
             );
@@ -467,13 +474,13 @@ async function activate(context) {
               updatedAt: resCustom.data.updatedAt,
               createdAt: resCustom.data.createdAt,
             };
+            await writeConfig();
             vscode.window.showInformationMessage(
               `Saving file to ${resCustom.data.ZUID}.`
             );
           }
           break;
       }
-      await writeConfig();
     }
   });
 }
