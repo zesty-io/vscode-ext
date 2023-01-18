@@ -28,7 +28,7 @@ var token = "";
 
 function makeDir(dir) {
   if (fs.existsSync(dir)) return;
-  fs.mkdirSync(dir);
+  fs.mkdirSync(dir, { recursive: true });
 }
 
 function makeFolders(folders) {
@@ -41,13 +41,19 @@ function findConfig() {
 }
 
 function makeFileSync(type, filename, content) {
-  var file = basePath;
-  if (type === "view") file += `${folders[1]}/${filename}`;
-  if (type === "style") file += `${folders[2]}/${filename}`;
-  if (type === "script") file += `${folders[3]}/${filename}`;
-  if (type === "config") file += `${filename}`;
-  makeDir(path.dirname(file));
-  fs.writeFileSync(file, content);
+  try {
+    var file = basePath;
+    if (type === "view")
+      file += `${folders[1]}/${
+        filename.charAt(0) !== "/" ? filename : filename.substring(1)
+      }`;
+    if (type === "style") file += `${folders[2]}/${filename}`;
+    if (type === "script") file += `${folders[3]}/${filename}`;
+    if (type === "config") file += filename;
+
+    makeDir(path.dirname(file));
+    fs.writeFileSync(file, content);
+  } catch (e) {}
 }
 
 async function syncInstanceView() {
@@ -58,6 +64,7 @@ async function syncInstanceView() {
     makeFileSync("view", view.fileName, view.code || "");
     viewObj[view.fileName] = {
       zuid: view.ZUID,
+      type: view.type,
       updatedAt: view.createdAt,
       createdAt: view.updatedAt,
     };
@@ -168,79 +175,81 @@ function getFileDetails(file) {
   fileArray.splice(0, fileArray.indexOf("webengine"));
   var baseDir = fileArray.shift();
   var type = fileArray.shift();
-  var extension = getExtension(filename);
+  if (baseDir !== "webengine") return {};
   var filename = fileArray.join("/");
-
-  if (extension === undefined && fileArray)
-    return {
-      filename,
-      baseDir,
-      type,
-      extension,
-    };
+  var extension = getExtension(filename);
+  if (extension !== undefined && type === "views") filename = "/" + filename;
+  var instance = zestyConfig.instance[type][filename];
+  return {
+    filename,
+    baseDir,
+    type,
+    extension,
+    instance,
+  };
 }
 
 async function saveFile(document) {
   if (!findConfig()) return;
 
   const file = getFileDetails(document.uri.path);
-
-  if (!zestyConfig.instance.hasOwnProperty(file.type)) return;
-
-  const fileZuid = zestyConfig.instance[file.type][file.filename];
+  if (!file.instance) return;
   const code = document.getText();
   const payload = {
-    filename: fileBreakDown[1],
+    filename: file.filename,
     code: code || " ",
-    type: fileZuid.type,
+    type: file.instance.type,
   };
 
-  if (fileZuid) {
-    switch (fileBreakDown[0]) {
+  if (file.type) {
+    switch (file.type) {
       case "views":
-        const updateView = await zestySDK.instance.updateView(fileZuid.zuid, {
-          code: payload.code,
-        });
+        const updateView = await zestySDK.instance.updateView(
+          file.instance.zuid,
+          {
+            code: payload.code,
+          }
+        );
 
         if (updateView.error) {
           vscode.window.showErrorMessage(
-            `Script cannot sync to ${fileZuid.zuid}. Error : ${updateView.error}`
+            `Script cannot sync to ${file.instance.zuid}. Error : ${updateView.error}`
           );
           return;
         }
         vscode.window.showInformationMessage(
-          `ZUID : ${fileZuid.zuid} has been updated and sync.`
+          `ZUID : ${file.instance.zuid} has been updated and sync.`
         );
         break;
       case "styles":
         const updateStyle = await zestySDK.instance.updateStylesheet(
-          fileZuid.zuid,
+          file.instance.zuid,
           payload
         );
         if (updateStyle.error) {
           vscode.window.showErrorMessage(
-            `Stylesheet cannot sync to ${fileZuid.zuid}. Error : ${updateStyle.error}.`
+            `Stylesheet cannot sync to ${file.instance.zuid}. Error : ${updateStyle.error}.`
           );
           return;
         }
         vscode.window.showInformationMessage(
-          `ZUID : ${fileZuid.zuid} has been updated and sync.`
+          `ZUID : ${file.instance.zuid} has been updated and sync.`
         );
         break;
       case "scripts":
         const updateScript = await request(
-          `https://${zestyConfig.instance_zuid}.api.zesty.io/v1/web/scripts/${fileZuid.zuid}`,
+          `https://${zestyConfig.instance_zuid}.api.zesty.io/v1/web/scripts/${file.instance.zuid}`,
           "PUT",
           payload
         );
         if (updateScript.error) {
           vscode.window.showErrorMessage(
-            `Stylesheet cannot sync to ${fileZuid.zuid}. Error : ${updateScript.error}.`
+            `Stylesheet cannot sync to ${file.instance.zuid}. Error : ${updateScript.error}.`
           );
           return;
         }
         vscode.window.showInformationMessage(
-          `ZUID : ${fileZuid.zuid} has been updated and sync.`
+          `ZUID : ${file.instance.zuid} has been updated and sync.`
         );
         break;
       default:
@@ -327,9 +336,9 @@ async function activate(context) {
 
       await makeFolders(folders);
 
+      await syncInstanceView();
       await syncInstanceStyles();
       await syncInstanceScipts();
-      await syncInstanceView();
       await writeConfig();
       await createGitIgnore();
     })
@@ -343,6 +352,12 @@ async function activate(context) {
   vscode.workspace.onDidDeleteFiles(async (event) => {
     if (!findConfig()) return;
     if (!isFileDeleteSyncEnabled()) return;
+    if (event.files.length > 1) {
+      vscode.window.showErrorMessage(
+        `Multiple file deletion is not yet supported.`
+      );
+      return;
+    }
     if (event.files) {
       const file = event.files[0];
       var filename = getFile(file);
@@ -456,6 +471,7 @@ async function activate(context) {
           if (!resSnippet.error) {
             zestyConfig.instance.views[payload.filename] = {
               zuid: resSnippet.data.ZUID,
+              type: resSnippet.data.type,
               updatedAt: resSnippet.data.updatedAt,
               createdAt: resSnippet.data.createdAt,
             };
@@ -471,6 +487,7 @@ async function activate(context) {
           if (!resCustom.error) {
             zestyConfig.instance.views[payload.filename] = {
               zuid: resCustom.data.ZUID,
+              type: resCustom.data.type,
               updatedAt: resCustom.data.updatedAt,
               createdAt: resCustom.data.createdAt,
             };
