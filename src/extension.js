@@ -3,6 +3,7 @@
 // Import the module and reference it with the alias vscode in your code below
 const vscode = require("vscode");
 const sdk = require("@zesty-io/sdk");
+const auth = new sdk.Auth();
 const fs = require("fs");
 const path = require("path");
 const fetch = require("node-fetch");
@@ -35,9 +36,38 @@ function makeFolders(folders) {
   folders.forEach((folder) => makeDir(basePath + folder));
 }
 
-function findConfig() {
+async function validate() {
+  token = vscode.workspace.getConfiguration("zesty.editor").get("token");
+  const res = await auth.verifyToken(token);
+  if (!res.verified) vscode.window.showErrorMessage(res.message);
+  return res;
+}
+
+async function init() {
   const pathConfig = `${basePath}/${zestyPackageConfig}`;
-  return fs.existsSync(pathConfig);
+  if (!fs.existsSync(pathConfig)) return false;
+  zestyConfig = readConfig(pathConfig, "JSON");
+  if (!zestyConfig.hasOwnProperty("instance_zuid")) {
+    vscode.window.showErrorMessage("Missing instance zuid on config file.");
+    return false;
+  }
+  const isVerified = await validate();
+  if (!isVerified.verified) {
+    const devToken = await vscode.window.showInputBox({
+      value: "",
+      placeHolder: "Please Enter your DEVELOPER TOKEN",
+    });
+    if (devToken === "" || devToken === undefined) {
+      vscode.window.showErrorMessage("Developer Token is required to proceed.");
+      return false;
+    }
+    const configuration = vscode.workspace.getConfiguration("zesty.editor");
+    await configuration.update("token", devToken);
+    const revalidate = await validate();
+    if (!revalidate.verified) return false;
+  }
+  zestySDK = new sdk(zestyConfig.instance_zuid, token);
+  return true;
 }
 
 function makeFileSync(type, filename, content) {
@@ -149,12 +179,6 @@ function isFileDeleteSyncEnabled() {
   return fileDeleteConfig;
 }
 
-function getDeveloperToken() {
-  const token = vscode.workspace.getConfiguration("zesty.editor").get("token");
-
-  return token;
-}
-
 async function request(url, method, payload) {
   var opts = {
     method: method,
@@ -180,6 +204,7 @@ function getFileDetails(file) {
   var extension = getExtension(filename);
   if (extension !== undefined && type === "views") filename = "/" + filename;
   var instance = zestyConfig.instance[type][filename];
+
   return {
     filename,
     baseDir,
@@ -190,7 +215,7 @@ function getFileDetails(file) {
 }
 
 async function saveFile(document) {
-  if (!findConfig()) return;
+  if (!(await init())) return;
 
   const file = getFileDetails(document.uri.path);
   if (!file.instance) return;
@@ -288,59 +313,27 @@ function isDirectory(path) {
   return fs.lstatSync(path).isDirectory();
 }
 
-async function validateToken() {
-  const auth = sdk.Auth();
-  token = getDeveloperToken();
-
-  if (token === "") {
-    vscode.window.showErrorMessage(
-      "Cannot find `instance_zuid` on the config file."
-    );
-  }
-}
-
 async function activate(context) {
   basePath = vscode.workspace.workspaceFolders[0].uri.fsPath;
-  loadConfig();
-  token = getDeveloperToken();
-  if (token !== "") zestySDK = new sdk(zestyConfig.instance_zuid, token);
+  await init();
+  // loadConfig();
+  // token = getDeveloperToken();
+  // if (token !== "") zestySDK = new sdk(zestyConfig.instance_zuid, token);
 
   context.subscriptions.push(
     vscode.commands.registerCommand("zesty-vscode-extension.run", async () => {
-      loadConfig();
-      if (!zestyConfig.hasOwnProperty("instance_zuid")) {
-        vscode.window.showErrorMessage(
-          "Cannot find `instance_zuid` on the config file."
-        );
-        return;
+      try {
+        if (!(await init())) return;
+        if (!zestyConfig.hasOwnProperty("instance")) zestyConfig.instance = {};
+        await makeFolders(folders);
+        await syncInstanceView();
+        await syncInstanceStyles();
+        await syncInstanceScipts();
+        await writeConfig();
+        await createGitIgnore();
+      } catch (e) {
+        console.log(e);
       }
-      token = getDeveloperToken();
-
-      if (token === "") {
-        const devToken = await vscode.window.showInputBox({
-          value: "",
-          placeHolder: "Please Enter your DEVELOPER TOKEN",
-        });
-        if (devToken === "" || devToken === undefined) {
-          vscode.window.showErrorMessage(
-            "Developer Token is required to proceed."
-          );
-          return;
-        }
-        const configuration = vscode.workspace.getConfiguration("zesty.editor");
-        await configuration.update("token", devToken);
-        token = devToken;
-      }
-
-      zestySDK = new sdk(zestyConfig.instance_zuid, token);
-
-      await makeFolders(folders);
-
-      await syncInstanceView();
-      await syncInstanceStyles();
-      await syncInstanceScipts();
-      await writeConfig();
-      await createGitIgnore();
     })
   );
 
@@ -350,7 +343,7 @@ async function activate(context) {
   });
 
   vscode.workspace.onDidDeleteFiles(async (event) => {
-    if (!findConfig()) return;
+    if (!(await init())) return;
     if (!isFileDeleteSyncEnabled()) return;
     if (event.files.length > 1) {
       vscode.window.showErrorMessage(
@@ -413,7 +406,7 @@ async function activate(context) {
   });
 
   vscode.workspace.onDidCreateFiles(async (event) => {
-    if (!findConfig()) return;
+    if (!(await init())) return;
     if (event.files) {
       const file = event.files[0];
       if (isDirectory(file.fsPath)) return;
