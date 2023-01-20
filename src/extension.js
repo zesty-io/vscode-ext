@@ -299,6 +299,7 @@ async function activate(context) {
       await syncInstanceStyles();
       await syncInstanceScipts();
       await writeConfig();
+      vscode.window.showInformationMessage(`File sync is completed.`);
     })
   );
 
