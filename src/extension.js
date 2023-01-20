@@ -315,14 +315,15 @@ async function activate(context) {
   vscode.workspace.onDidDeleteFiles(async (event) => {
     if (!(await init())) return;
     if (!isFileDeleteSyncEnabled()) return;
-    if (event.files.length > 1) {
-      vscode.window.showErrorMessage(
-        `Multiple file deletion is not yet supported.`
-      );
-      return;
-    }
     if (event.files) {
       const file = getFileDetails(event.files[0].path);
+      if (!file.filename || file.filename === zestyPackageConfig) return;
+      if (event.files.length > 1) {
+        vscode.window.showErrorMessage(
+          `Multiple file deletion is not yet supported.`
+        );
+        return;
+      }
       if (!file.instance) {
         vscode.window.showErrorMessage("Cannot sync to the instance.");
         return;
@@ -372,6 +373,7 @@ async function activate(context) {
     if (!(await init())) return;
     if (event.files) {
       const file = getFileDetails(event.files[0].path);
+      if (!file.filename || file.filename === zestyPackageConfig) return;
       var payload = {
         filename: file.filename,
         type: "ajax-json",

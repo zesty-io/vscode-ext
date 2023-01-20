@@ -16,10 +16,6 @@ mkdir mydomain.com
 
 - Right click the `zesty.config.json` then click `Sync to Instance`
 - Input your developer token then press enter.
-  - a.) Since there's is no interactive login to refresh the stale token, you need to manually omit once the token expires.
-  - b.) Update token through `settings.json` or use command `ctlr + shift + p` and search for `Open Setting (UI)`.
-  - c.) On _Workspace_ tab, click `Extension` then s\* ect `Zesty`. All zesty settings will appear, input your token on the `Developer Token` field.
-  - d.) Right Click `zesty.config.json` then select `Sync to Instance`.
 - Instance files including view, scripts and stylesheet will sync and copied to your local machine..
 
 ## Functionality Notes
