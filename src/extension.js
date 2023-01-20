@@ -3,6 +3,7 @@
 // Import the module and reference it with the alias vscode in your code below
 const vscode = require("vscode");
 const sdk = require("@zesty-io/sdk");
+const auth = new sdk.Auth();
 const fs = require("fs");
 const path = require("path");
 const fetch = require("node-fetch");
@@ -28,33 +29,91 @@ var token = "";
 
 function makeDir(dir) {
   if (fs.existsSync(dir)) return;
-  fs.mkdirSync(dir);
+  fs.mkdirSync(dir, { recursive: true });
 }
 
 function makeFolders(folders) {
   folders.forEach((folder) => makeDir(basePath + folder));
 }
 
+async function validate() {
+  token = vscode.workspace.getConfiguration("zesty.editor").get("token");
+  const res = await auth.verifyToken(token);
+  if (!res.verified) vscode.window.showErrorMessage(res.message);
+  return res;
+}
+
+async function init() {
+  const pathConfig = `${basePath}/${zestyPackageConfig}`;
+  if (!fs.existsSync(pathConfig)) return false;
+  zestyConfig = readConfig(pathConfig, "JSON");
+  if (
+    !zestyConfig.hasOwnProperty("instance_zuid") ||
+    !zestyConfig.instance_zuid ||
+    zestyConfig.instance_zuid === ""
+  ) {
+    vscode.window.showErrorMessage("Missing instance zuid on config file.");
+    return false;
+  }
+  const isVerified = await validate();
+  if (!isVerified.verified) {
+    const devToken = await vscode.window.showInputBox({
+      value: "",
+      placeHolder: "Please Enter your DEVELOPER TOKEN",
+    });
+    if (devToken === "" || devToken === undefined) {
+      vscode.window.showErrorMessage("Developer Token is required to proceed.");
+      return false;
+    }
+    const configuration = vscode.workspace.getConfiguration("zesty.editor");
+    await configuration.update("token", devToken);
+    const revalidate = await validate();
+    if (!revalidate.verified) return false;
+  }
+  zestySDK = new sdk(zestyConfig.instance_zuid, token);
+  return true;
+}
+
+async function request(url, method, payload) {
+  var opts = {
+    method: method,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  };
+
+  if (method !== "GET") opts.body = JSON.stringify(payload);
+
+  const res = await fetch(url, opts);
+  return res.json();
+}
+
 function makeFileSync(type, filename, content) {
-  var file = basePath;
-  if (type === "view") file += `${folders[1]}/${filename}`;
-  if (type === "style") file += `${folders[2]}/${filename}`;
-  if (type === "script") file += `${folders[3]}/${filename}`;
-  if (type === "config") file += `${filename}`;
-  if (!fs.existsSync(file)) {
+  try {
+    var file = basePath;
+    if (type === "view")
+      file += `${folders[1]}/${
+        filename.charAt(0) !== "/" ? filename : filename.substring(1)
+      }`;
+    if (type === "style") file += `${folders[2]}/${filename}`;
+    if (type === "script") file += `${folders[3]}/${filename}`;
+    if (type === "config") file += filename;
+
     makeDir(path.dirname(file));
     fs.writeFileSync(file, content);
-  }
+  } catch (e) {}
 }
 
 async function syncInstanceView() {
-  var res = await zestySDK.instance.getViews();
+  const res = await zestySDK.instance.getViews();
   var views = res.data;
   var viewObj = {};
   views.forEach((view) => {
-    makeFileSync("view", view.fileName + ".html", view.code || "");
+    makeFileSync("view", view.fileName, view.code || "");
     viewObj[view.fileName] = {
       zuid: view.ZUID,
+      type: view.type,
       updatedAt: view.createdAt,
       createdAt: view.updatedAt,
     };
@@ -63,7 +122,7 @@ async function syncInstanceView() {
 }
 
 async function syncInstanceStyles() {
-  var res = await zestySDK.instance.getStylesheets();
+  const res = await zestySDK.instance.getStylesheets();
   var styleObj = {};
   res.data.forEach((stylesheet) => {
     makeFileSync("style", stylesheet.fileName, stylesheet.code);
@@ -78,16 +137,11 @@ async function syncInstanceStyles() {
 }
 
 async function syncInstanceScipts() {
-  var scriptResponse = await fetch(
+  const res = await request(
     `https://${zestyConfig.instance_zuid}.api.zesty.io/v1/web/scripts`,
-    {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
+    "GET",
+    {}
   );
-  var res = await scriptResponse.json();
   var scriptObj = {};
   res.data.forEach((script) => {
     makeFileSync("script", script.fileName, script.code);
@@ -102,7 +156,7 @@ async function syncInstanceScipts() {
 }
 
 function readConfig(path, fileType) {
-  var res = fs.readFileSync(path, {
+  const res = fs.readFileSync(path, {
     encoding: "utf8",
   });
   return fileType === "JSON" ? JSON.parse(res) : res;
@@ -139,61 +193,70 @@ function isFileDeleteSyncEnabled() {
   return fileDeleteConfig;
 }
 
-function getDeveloperToken() {
-  const token = vscode.workspace.getConfiguration("zesty.editor").get("token");
+function getFileDetails(file) {
+  const excludeExtList = ["css", "sass", "less", "scss", "js", undefined];
+  var fileArray = file.split("/");
+  fileArray.splice(0, fileArray.indexOf("webengine"));
+  var baseDir = fileArray.shift();
+  var type = fileArray.shift();
+  if (baseDir !== "webengine") return {};
+  var filename = fileArray.join("/");
+  var extension = getExtension(filename);
+  if (!excludeExtList.includes(extension)) filename = "/" + filename;
+  var instance = zestyConfig.instance[type][filename];
 
-  return token;
+  return {
+    filename,
+    baseDir,
+    type,
+    extension,
+    instance,
+  };
 }
 
 async function saveFile(document) {
-  const filePath = document.uri;
-  var fileBreakDown = filePath.path
-    .split("/")
-    .splice(Math.max(filePath.path.split("/").length - 2, 0));
-
-  if (document.languageId === "html")
-    fileBreakDown[1] = fileBreakDown[1].replace(".html", "");
-
-  if (!zestyConfig.instance.hasOwnProperty(fileBreakDown[0])) return;
-
-  const fileZuid = zestyConfig.instance[fileBreakDown[0]][fileBreakDown[1]];
+  const file = getFileDetails(document.uri.path);
+  if (!file.filename || file.filename === zestyPackageConfig) return;
+  if (!file.instance) {
+    vscode.window.showErrorMessage("Cannot sync to the instance.");
+    return;
+  }
+  if (!(await init())) return;
   const code = document.getText();
+  const payload = {
+    filename: file.filename,
+    code: code || " ",
+    type: file.instance.type,
+  };
 
-  if (fileZuid) {
-    if (fileBreakDown[0] === "views") {
-      await zestySDK.instance.updateView(fileZuid.zuid, {
-        code: code,
-      });
-    }
-
-    if (fileBreakDown[0] === "styles") {
-      await zestySDK.instance.updateStylesheet(fileZuid.zuid, {
-        filename: fileBreakDown[1],
-        type: fileZuid.type,
-        code: code,
-      });
-    }
-    if (fileBreakDown[0] === "scripts") {
-      await fetch(
-        `https://${zestyConfig.instance_zuid}.api.zesty.io/v1/web/scripts/${fileZuid.zuid}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            filename: fileBreakDown[1],
-            code: code,
-            type: fileZuid.type,
-          }),
-        }
+  switch (file.extension) {
+    case "css":
+    case "less":
+    case "scss":
+    case "sass":
+      await zestySDK.instance.updateStylesheet(file.instance.zuid, payload);
+      vscode.window.showInformationMessage(
+        `Saving stylesheet to ${file.instance.zuid}.`
       );
-    }
-
-    vscode.window.showInformationMessage(
-      `ZUID : ${fileZuid.zuid} has been updated and sync.`
-    );
+      break;
+    case "js":
+      await request(
+        `https://${zestyConfig.instance_zuid}.api.zesty.io/v1/web/scripts/${file.instance.zuid}`,
+        "PUT",
+        payload
+      );
+      vscode.window.showInformationMessage(
+        `Saving script to ${file.instance.zuid}.`
+      );
+      break;
+    default:
+      await zestySDK.instance.updateView(file.instance.zuid, {
+        code: payload.code,
+      });
+      vscode.window.showInformationMessage(
+        `Saving view to ${file.instance.zuid}.`
+      );
+      break;
   }
 }
 
@@ -210,7 +273,8 @@ function getFile(file) {
 }
 
 function getExtension(filename) {
-  return filename.split(".").pop();
+  var ext = /[^.]+$/.exec(filename);
+  return /[.]/.exec(filename) ? ext[0] : undefined;
 }
 
 function loadConfig() {
@@ -222,58 +286,24 @@ function loadConfig() {
   }
 }
 
-async function validateToken() {
-  const auth = sdk.Auth();
-  token = getDeveloperToken();
-
-  if (token === "") {
-    vscode.window.showErrorMessage(
-      "Cannot find `instance_zuid` on the config file."
-    );
-  }
+function isDirectory(path) {
+  return fs.lstatSync(path).isDirectory();
 }
 
 async function activate(context) {
   basePath = vscode.workspace.workspaceFolders[0].uri.fsPath;
-  loadConfig();
-  token = getDeveloperToken();
-  if (token !== "") zestySDK = new sdk(zestyConfig.instance_zuid, token);
+  await init();
 
   context.subscriptions.push(
     vscode.commands.registerCommand("zesty-vscode-extension.run", async () => {
-      loadConfig();
-      if (!zestyConfig.hasOwnProperty("instance_zuid")) {
-        vscode.window.showErrorMessage(
-          "Cannot find `instance_zuid` on the config file."
-        );
-        return;
-      }
-      token = getDeveloperToken();
-
-      if (token === "") {
-        const devToken = await vscode.window.showInputBox({
-          value: "",
-          placeHolder: "Please Enter your DEVELOPER TOKEN",
-        });
-        if (devToken === "" || devToken === undefined) {
-          vscode.window.showErrorMessage(
-            "Developer Token is required to proceed."
-          );
-          return;
-        }
-        const configuration = vscode.workspace.getConfiguration("zesty.editor");
-        await configuration.update("token", devToken);
-        token = devToken;
-      }
-
-      zestySDK = new sdk(zestyConfig.instance_zuid, token);
-
+      if (!(await init())) return;
+      if (!zestyConfig.hasOwnProperty("instance")) zestyConfig.instance = {};
       await makeFolders(folders);
       await syncInstanceView();
       await syncInstanceStyles();
       await syncInstanceScipts();
       await writeConfig();
-      await createGitIgnore();
+      vscode.window.showInformationMessage(`File sync is completed.`);
     })
   );
 
@@ -283,125 +313,145 @@ async function activate(context) {
   });
 
   vscode.workspace.onDidDeleteFiles(async (event) => {
+    if (!(await init())) return;
     if (!isFileDeleteSyncEnabled()) return;
     if (event.files) {
-      const file = event.files[0];
-      var filename = getFile(file);
-      var fileType = getExtension(filename);
-      if (fileType === "css" || fileType === "less" || fileType === "scss") {
-        if (zestyConfig.instance.styles.hasOwnProperty(filename)) {
-          const style = zestyConfig.instance.styles[filename];
-          await zestySDK.instance.deleteStylesheet(style.zuid);
-          delete zestyConfig.instance.styles[filename];
-          await writeConfig();
-          vscode.window.showInformationMessage(
-            `Files has been delete and synced to the instance.`
-          );
-        }
+      const file = getFileDetails(event.files[0].path);
+      if (!file.filename || file.filename === zestyPackageConfig) return;
+      if (event.files.length > 1) {
+        vscode.window.showErrorMessage(
+          `Multiple file deletion is not yet supported.`
+        );
+        return;
+      }
+      if (!file.instance) {
+        vscode.window.showErrorMessage("Cannot sync to the instance.");
+        return;
       }
 
-      if (fileType === "js") {
-        if (zestyConfig.instance.scripts.hasOwnProperty(filename)) {
-          const script = zestyConfig.instance.scripts[filename];
-          await fetch(
-            `https://${zestyConfig.instance_zuid}.api.zesty.io/v1/web/scripts/${script.zuid}`,
-            {
-              method: "DELETE",
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            }
-          );
-          delete zestyConfig.instance.scripts[filename];
+      switch (file.extension) {
+        case "css":
+        case "less":
+        case "scss":
+        case "sass":
+          await zestySDK.instance.deleteStylesheet(file.instance.zuid);
+          delete zestyConfig.instance.styles[file.filename];
           await writeConfig();
           vscode.window.showInformationMessage(
-            `Files has been delete and synced to the instance.`
+            `Deleting stylesheet from ${file.instance.zuid}`
           );
-        }
-      }
-
-      if (fileType === "html") {
-        var filenameEdit = filename.replace(".html", "");
-        if (zestyConfig.instance.views.hasOwnProperty(filenameEdit)) {
-          const view = zestyConfig.instance.views[filenameEdit];
-          await fetch(
-            `https://${zestyConfig.instance_zuid}.api.zesty.io/v1/web/views/${view.zuid}`,
-            {
-              method: "DELETE",
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            }
+          break;
+        case "js":
+          await request(
+            `https://${zestyConfig.instance_zuid}.api.zesty.io/v1/web/scripts/${file.instance.zuid}`,
+            "DELETE",
+            {}
           );
-          delete zestyConfig.instance.views[filenameEdit];
+          delete zestyConfig.instance.scripts[file.filename];
           await writeConfig();
           vscode.window.showInformationMessage(
-            `Files has been delete and synced to the instance.`
+            `Deleting script from ${file.instance.zuid}`
           );
-        }
+          break;
+        default:
+          await request(
+            `https://${zestyConfig.instance_zuid}.api.zesty.io/v1/web/views/${file.instance.zuid}`,
+            "DELETE",
+            {}
+          );
+          delete zestyConfig.instance.views[file.filename];
+          await writeConfig();
+          vscode.window.showInformationMessage(
+            `Deleting view from ${file.instance.zuid}`
+          );
+          break;
       }
     }
   });
 
   vscode.workspace.onDidCreateFiles(async (event) => {
+    if (!(await init())) return;
     if (event.files) {
-      const file = event.files[0];
-      var filename = getFile(file);
-      var fileType = getExtension(filename);
+      const file = getFileDetails(event.files[0].path);
+      if (!file.filename || file.filename === zestyPackageConfig) return;
       var payload = {
-        filename: filename,
-        type: "snippet",
+        filename: file.filename,
+        type: "ajax-json",
         code: " ",
       };
-      if (fileType === "css" || fileType === "less" || fileType === "scss") {
-        payload.type = `text/${fileType}`;
-        const res = await zestySDK.instance.createStylesheet(payload);
-        if (res.data.ZUID) {
-          zestyConfig.instance.styles[filename] = {
-            zuid: res.data.ZUID,
-            type: res.data.type,
-            updatedAt: res.data.updatedAt,
-            createdAt: res.data.createdAt,
-          };
-        }
-      }
-      if (fileType === "js") {
-        payload.type = "text/javascript";
-        const result = await fetch(
-          `https://${zestyConfig.instance_zuid}.api.zesty.io/v1/web/scripts`,
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${zestyConfig.token}`,
-            },
-            body: JSON.stringify(payload),
+
+      switch (file.extension) {
+        case "css":
+        case "less":
+        case "scss":
+        case "sass":
+          payload.type = `text/${file.extension}`;
+          var resStyle = await zestySDK.instance.createStylesheet(payload);
+          if (!resStyle.error) {
+            zestyConfig.instance.styles[payload.filename] = {
+              zuid: resStyle.data.ZUID,
+              type: resStyle.data.type,
+              updatedAt: resStyle.data.updatedAt,
+              createdAt: resStyle.data.createdAt,
+            };
+            await writeConfig();
+            vscode.window.showInformationMessage(
+              `Creating stylesheet to ${resStyle.data.ZUID}.`
+            );
           }
-        );
-        const res = await result.json();
-        if (res.data.ZUID) {
-          zestyConfig.instance.scripts[filename] = {
-            zuid: res.data.ZUID,
-            type: res.data.type,
-            updatedAt: res.data.updatedAt,
-            createdAt: res.data.createdAt,
-          };
-        }
+          break;
+        case "js":
+          payload.type = "text/javascript";
+          var resScript = await request(
+            `https://${zestyConfig.instance_zuid}.api.zesty.io/v1/web/scripts`,
+            "POST",
+            payload
+          );
+          if (!resScript.error) {
+            zestyConfig.instance.scripts[payload.filename] = {
+              zuid: resScript.data.ZUID,
+              type: resScript.data.type,
+              updatedAt: resScript.data.updatedAt,
+              createdAt: resScript.data.createdAt,
+            };
+            await writeConfig();
+            vscode.window.showInformationMessage(
+              `Creating script to ${resScript.data.ZUID}.`
+            );
+          }
+          break;
+        case undefined:
+          payload.type = "snippet";
+          var resSnippet = await zestySDK.instance.createView(payload);
+          if (!resSnippet.error) {
+            zestyConfig.instance.views[payload.filename] = {
+              zuid: resSnippet.data.ZUID,
+              type: resSnippet.data.type,
+              updatedAt: resSnippet.data.updatedAt,
+              createdAt: resSnippet.data.createdAt,
+            };
+            await writeConfig();
+            vscode.window.showInformationMessage(
+              `Creating file to ${resSnippet.data.ZUID}.`
+            );
+          }
+          break;
+        default:
+          var resCustom = await zestySDK.instance.createView(payload);
+          if (!resCustom.error) {
+            zestyConfig.instance.views[payload.filename] = {
+              zuid: resCustom.data.ZUID,
+              type: resCustom.data.type,
+              updatedAt: resCustom.data.updatedAt,
+              createdAt: resCustom.data.createdAt,
+            };
+            await writeConfig();
+            vscode.window.showInformationMessage(
+              `Creating file to ${resCustom.data.ZUID}.`
+            );
+          }
+          break;
       }
-      if (fileType === "html") {
-        payload.filename = filename.replace(".html", "");
-        const res = await zestySDK.instance.createView(payload);
-        if (res.data.ZUID) {
-          zestyConfig.instance.views[payload.filename] = {
-            zuid: res.data.ZUID,
-            updatedAt: res.data.updatedAt,
-            createdAt: res.data.createdAt,
-          };
-        }
-      }
-      await writeConfig();
-      vscode.window.showInformationMessage(
-        `Files has been synced to instance.`
-      );
     }
   });
 }
