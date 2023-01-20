@@ -70,6 +70,21 @@ async function init() {
   return true;
 }
 
+async function request(url, method, payload) {
+  var opts = {
+    method: method,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  };
+
+  if (method !== "GET") opts.body = JSON.stringify(payload);
+
+  const res = await fetch(url, opts);
+  return res.json();
+}
+
 function makeFileSync(type, filename, content) {
   try {
     var file = basePath;
@@ -118,16 +133,11 @@ async function syncInstanceStyles() {
 }
 
 async function syncInstanceScipts() {
-  var scriptResponse = await fetch(
+  const res = await request(
     `https://${zestyConfig.instance_zuid}.api.zesty.io/v1/web/scripts`,
-    {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
+    "GET",
+    {}
   );
-  const res = await scriptResponse.json();
   var scriptObj = {};
   res.data.forEach((script) => {
     makeFileSync("script", script.fileName, script.code);
@@ -177,21 +187,6 @@ function isFileDeleteSyncEnabled() {
     .get("syncFileOnDelete");
 
   return fileDeleteConfig;
-}
-
-async function request(url, method, payload) {
-  var opts = {
-    method: method,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-  };
-
-  if (method !== "GET") opts.body = JSON.stringify(payload);
-
-  const res = await fetch(url, opts);
-  return res.json();
 }
 
 function getFileDetails(file) {
