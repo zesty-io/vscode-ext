@@ -47,7 +47,11 @@ async function init() {
   const pathConfig = `${basePath}/${zestyPackageConfig}`;
   if (!fs.existsSync(pathConfig)) return false;
   zestyConfig = readConfig(pathConfig, "JSON");
-  if (!zestyConfig.hasOwnProperty("instance_zuid")) {
+  if (
+    !zestyConfig.hasOwnProperty("instance_zuid") ||
+    !zestyConfig.instance_zuid ||
+    zestyConfig.instance_zuid === ""
+  ) {
     vscode.window.showErrorMessage("Missing instance zuid on config file.");
     return false;
   }
