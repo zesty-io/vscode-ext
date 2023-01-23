@@ -23,13 +23,13 @@ mkdir mydomain.com
 - Any existing view, stylesheet, or script on a cloud instance will synchronize and become editable through VSCode.
 - New files may be created from on the local machine, and they will sync to the cloud content instance
 - Javascript and CSS files can be created remotely from the local project, and will be synced to the cloud instance
-- Stylesheets and javascript compile in the cloud on save (SASS, SCSS, LESS supported)
+- Stylesheets and javascript compiles in the cloud on save (SASS, SCSS, LESS supported)
 - Custom endpoints for xml,json, html, etc. can be created by making a new file in your views folder with an extension
 - Adjustment on file under `webengine` folder will automatically sync to the instance.
 
 ## Requirements
 
-- Zesty account is require. create your account at https://www.zesty.io/join/
+- Zesty account is required. Create your account at https://www.zesty.io/join/
 
 ## Extension Settings
 
@@ -56,9 +56,9 @@ Phase 1 Release
 - Files will sync down with command in VSCode.
 - New files will be created and sync to zesty project.
 - Files by default will automatically save on save, with an option to sync with a VS Code command, with an option to turn off synchronization on save. (maybe)
-- Deleting file synchronization can be turn off. Notification should prompt before deletion.
+- Deleting file synchronization can be turned off. A notification will prompt before file deletion.
 - Options will be stored on a .vscode configuration file.
-- Vscode will be a opensource codebase on github. https://github.com/zesty-io/vscode-ext
+- Opensource codebase on github. https://github.com/zesty-io/vscode-ext
 - Submit feature requests https://github.com/zesty-io/vscode-ext/issues/new/choose
 - Submit bugs https://github.com/zesty-io/vscode-ext/issues/new/choose
 - Command for zesty init will create a shell zesty.json config file.
