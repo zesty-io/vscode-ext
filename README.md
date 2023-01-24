@@ -60,8 +60,6 @@ Submit issues on github https://github.com/zesty-io/vscode-ext/issues
 
 ## Release Notes
 
-### 0.0.1
-
 Phase 1 Release
 
 - Zesty Plugin will be available on VSCode Extension Store.

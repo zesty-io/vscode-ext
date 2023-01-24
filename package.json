@@ -13,8 +13,7 @@
     "Other"
   ],
   "activationEvents": [
-    "workspaceContains:zesty.config.json",
-    "workspaceContains:/webengine/"
+    "workspaceContains:zesty.config.json"
   ],
   "main": "./src/extension.js",
   "contributes": {
