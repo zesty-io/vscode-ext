@@ -313,6 +313,7 @@ async function activate(context) {
   );
 
   vscode.workspace.onDidSaveTextDocument(async (document) => {
+    console.log("fire");
     if (!isFileSaveSyncEnabled()) return;
     await saveFile(document);
   });

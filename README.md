@@ -42,8 +42,8 @@ mkdir mydomain.com
 
 ## Requirements
 
-- Zesty account is require. create your account at https://www.zesty.io/join/
-- a zesty.io instance to sync with.
+- A zesty.io account.
+- A zesty.io instance to sync with.
 - Developer Token for authenticated connection with zesty.io instance.
 
 ## Extension Settings
