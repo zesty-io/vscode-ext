@@ -1,4 +1,14 @@
+## Zesty.io VS Code Extension
+
+Use this package to connect the Visual Studio Code to your Zesty.io Instance. This extension will sync the remote instance content and create files to your local machine. You can edit the files (views, stylesheet and scripts) and save them locally. Saving file will push the changes to the associated file from your instance.
+
 ## Getting Started
+
+- Install the `zesty-vscode-extension` package to vscode
+
+```
+code --install-extension zesty-io.zesty-vscode-extension
+```
 
 - Create empty directory for your instance.
 
@@ -6,17 +16,19 @@
 mkdir mydomain.com
 ```
 
-- Create `zesty.config.json` on your root folder and add your target instance zuid.
+- Create a file on your root folder named `zesty.config.json`.
+- Add the following to the `zesty.config.json` file.
 
 ```json
 {
-  "instance_zuid": "YOUR INSTANCE ZUID"
+  "instance_zuid": "INSTANCE_ZUID"
 }
 ```
 
-- Right click the `zesty.config.json` then click `Sync to Instance`
+- Replace `INSTANCE_ZUID` with the value from your instance.
+- Sync instance file by right clicking the `zesty.config.json` file then click `Sync to Instance` or by using the key command shortcut (`ctrl + alt + i`)
 - Input your developer token then press enter.
-- Instance files including view, scripts and stylesheet will sync and copied to your local machine..
+- Instance contents including view, scripts and stylesheet will sync and copied to your local machine.
 
 ## Functionality Notes
 
@@ -26,10 +38,11 @@ mkdir mydomain.com
 - Stylesheets and javascript compiles in the cloud on save (SASS, SCSS, LESS supported)
 - Custom endpoints for xml,json, html, etc. can be created by making a new file in your views folder with an extension
 - Adjustment on file under `webengine` folder will automatically sync to the instance.
+- With option enable or disable sync file deletion and saving with vscode settings.
 
 ## Requirements
 
-- Zesty account is required. Create your account at https://www.zesty.io/join/
+- Zesty account is require. create your account at https://www.zesty.io/join/
 
 ## Extension Settings
 
