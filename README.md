@@ -1,6 +1,6 @@
 ## Zesty.io VS Code Extension
 
-Use this package to connect the Visual Studio Code to your Zesty.io Instance. This extension will sync the remote instance content and create files to your local machine. You can edit the files (views, stylesheet and scripts) and save them locally. Saving file will push the changes to the associated file from your instance.
+Use this package to connect the Visual Studio Code to your Zesty.io Instance. This extension will sync the remote instance content and create files to your local machine. You can edit the files (views, stylesheet and scripts) and save them locally. Saving a file will push the changes to the associated file from your instance.
 
 ## Getting Started
 
@@ -35,15 +35,15 @@ mkdir mydomain.com
 - Any existing view, stylesheet, or script on a cloud instance will synchronize and become editable through VSCode.
 - New files may be created from on the local machine, and they will sync to the cloud content instance
 - Javascript and CSS files can be created remotely from the local project, and will be synced to the cloud instance
-- Stylesheets and javascript compile in the cloud on save (SASS, SCSS, LESS supported)
+- Stylesheets and javascript compiles in the cloud on save (SASS, SCSS, LESS supported)
 - Custom endpoints for xml,json, html, etc. can be created by making a new file in your views folder with an extension
 - Adjustment on file under `webengine` folder will automatically sync to the instance.
 - With option enable or disable sync file deletion and saving with vscode settings.
 
 ## Requirements
 
-- A zesty.io account.
-- A zesty.io instance to sync with.
+- A zesty.io account is required. Create your account at https://www.zesty.io/join/
+- A zesty.io instance.
 - Developer Token for authenticated connection with zesty.io instance.
 
 ## Extension Settings
@@ -71,9 +71,9 @@ Phase 1 Release
 - Files will sync down with command in VSCode.
 - New files will be created and sync to zesty project.
 - Files by default will automatically save on save, with an option to sync with a VS Code command, with an option to turn off synchronization on save. (maybe)
-- Deleting file synchronization can be turn off. Notification should prompt before deletion.
+- Deleting file synchronization can be turned off. A notification will prompt before file deletion.
 - Options will be stored on a .vscode configuration file.
-- Vscode will be a opensource codebase on github. https://github.com/zesty-io/vscode-ext
+- Opensource codebase on github. https://github.com/zesty-io/vscode-ext
 - Submit feature requests https://github.com/zesty-io/vscode-ext/issues/new/choose
 - Submit bugs https://github.com/zesty-io/vscode-ext/issues/new/choose
 - Command for zesty init will create a shell zesty.json config file.
