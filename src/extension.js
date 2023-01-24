@@ -107,32 +107,35 @@ function makeFileSync(type, filename, content) {
 
 async function syncInstanceView() {
   const res = await zestySDK.instance.getViews();
-  var views = res.data;
   var viewObj = {};
-  views.forEach((view) => {
-    makeFileSync("view", view.fileName, view.code || "");
-    viewObj[view.fileName] = {
-      zuid: view.ZUID,
-      type: view.type,
-      updatedAt: view.createdAt,
-      createdAt: view.updatedAt,
-    };
-  });
+  res.data
+    .filter((view) => view.status === "dev")
+    .forEach((view) => {
+      makeFileSync("view", view.fileName, view.code || "");
+      viewObj[view.fileName] = {
+        zuid: view.ZUID,
+        type: view.type,
+        updatedAt: view.createdAt,
+        createdAt: view.updatedAt,
+      };
+    });
   zestyConfig.instance.views = viewObj;
 }
 
 async function syncInstanceStyles() {
   const res = await zestySDK.instance.getStylesheets();
   var styleObj = {};
-  res.data.forEach((stylesheet) => {
-    makeFileSync("style", stylesheet.fileName, stylesheet.code);
-    styleObj[stylesheet.fileName] = {
-      zuid: stylesheet.ZUID,
-      type: stylesheet.type,
-      updatedAt: stylesheet.createdAt,
-      createdAt: stylesheet.updatedAt,
-    };
-  });
+  res.data
+    .filter((stylesheet) => stylesheet.status === "dev")
+    .forEach((stylesheet) => {
+      makeFileSync("style", stylesheet.fileName, stylesheet.code);
+      styleObj[stylesheet.fileName] = {
+        zuid: stylesheet.ZUID,
+        type: stylesheet.type,
+        updatedAt: stylesheet.createdAt,
+        createdAt: stylesheet.updatedAt,
+      };
+    });
   zestyConfig.instance.styles = styleObj;
 }
 
@@ -143,15 +146,17 @@ async function syncInstanceScipts() {
     {}
   );
   var scriptObj = {};
-  res.data.forEach((script) => {
-    makeFileSync("script", script.fileName, script.code);
-    scriptObj[script.fileName] = {
-      zuid: script.ZUID,
-      type: script.type,
-      updatedAt: script.createdAt,
-      createdAt: script.updatedAt,
-    };
-  });
+  res.data
+    .filter((script) => script.status === "dev")
+    .forEach((script) => {
+      makeFileSync("script", script.fileName, script.code);
+      scriptObj[script.fileName] = {
+        zuid: script.ZUID,
+        type: script.type,
+        updatedAt: script.createdAt,
+        createdAt: script.updatedAt,
+      };
+    });
   zestyConfig.instance.scripts = scriptObj;
 }
 
@@ -308,6 +313,7 @@ async function activate(context) {
   );
 
   vscode.workspace.onDidSaveTextDocument(async (document) => {
+    console.log("fire");
     if (!isFileSaveSyncEnabled()) return;
     await saveFile(document);
   });
@@ -371,7 +377,7 @@ async function activate(context) {
 
   vscode.workspace.onDidCreateFiles(async (event) => {
     if (!(await init())) return;
-    if (event.files) {
+    if (event.files && !isDirectory(event.files[0].fsPath)) {
       const file = getFileDetails(event.files[0].path);
       if (!file.filename || file.filename === zestyPackageConfig) return;
       var payload = {
