@@ -1,6 +1,6 @@
 ## Zesty.io VS Code Extension
 
-Use this package to connect the Visual Studio Code to your Zesty.io Instance. This extension will sync the remote instance content and create files to your local machine. You can edit the files (views, stylesheet and scripts) and save them locally. Saving file will push the changes to the associated file from your instance.
+Use this package to connect the Visual Studio Code to your Zesty.io Instance. This extension will sync the remote instance content and create files to your local machine. You can edit the files (views, stylesheet and scripts) and save them locally. Saving a file will push the changes to the associated file from your instance.
 
 ## Getting Started
 
@@ -42,7 +42,9 @@ mkdir mydomain.com
 
 ## Requirements
 
-- Zesty account is require. create your account at https://www.zesty.io/join/
+- A zesty.io account is required. Create your account at https://www.zesty.io/join/
+- A zesty.io instance.
+- Developer Token for authenticated connection with zesty.io instance.
 
 ## Extension Settings
 
