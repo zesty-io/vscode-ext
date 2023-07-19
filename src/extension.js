@@ -36,6 +36,10 @@ function makeFolders(folders) {
 }
 
 async function validate() {
+  if (!token) {
+    vscode.window.showErrorMessage("Access Token not found.");
+    return false;
+  }
   const res = await zestySDK.account.getInstance();
   if (res.error) {
     vscode.window.showErrorMessage(res.error);
@@ -57,11 +61,8 @@ async function init() {
     return false;
   }
   token = vscode.workspace.getConfiguration("zesty.editor").get("token");
-  zestySDK = new sdk(zestyConfig.instance_zuid, token);
-  const isVerified = await validate();
-  if (!isVerified) return false;
-
-  return true;
+  if (token && zestyConfig.instance_zuid)
+    zestySDK = new sdk(zestyConfig.instance_zuid, token);
 }
 
 async function request(url, method, payload) {
@@ -304,8 +305,10 @@ async function activate(context) {
         }
         const configuration = vscode.workspace.getConfiguration("zesty.editor");
         await configuration.update("token", devToken);
-        if (!(await init())) return;
+        await init();
+        if (!(await validate())) return;
       }
+
       if (!zestyConfig.hasOwnProperty("instance")) zestyConfig.instance = {};
       await makeFolders(folders);
       await syncInstanceView();
