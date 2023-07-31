@@ -42,7 +42,9 @@ async function validate() {
   }
   const res = await zestySDK.account.getInstance();
   if (res.error) {
-    vscode.window.showErrorMessage(res.error);
+    vscode.window.showErrorMessage(
+      "Invalid or expired developer token provided."
+    );
     return false;
   }
   return true;
