@@ -95,7 +95,10 @@ function makeFileSync(type, filename, content) {
 
     makeDir(path.dirname(file));
     fs.writeFileSync(file, content);
-  } catch (e) {}
+  } catch (e) {
+    vscode.window.showErrorMessage(`Unable to sync file : ${filename}.`);
+    return false;
+  }
 }
 
 async function syncInstanceView() {
@@ -104,13 +107,14 @@ async function syncInstanceView() {
   res.data
     .filter((view) => view.status === "dev")
     .forEach((view) => {
-      makeFileSync("view", view.fileName, view.code || "");
-      viewObj[view.fileName] = {
-        zuid: view.ZUID,
-        type: view.type,
-        updatedAt: view.createdAt,
-        createdAt: view.updatedAt,
-      };
+      if (!makeFileSync("view", view.fileName, view.code || "")) {
+        viewObj[view.fileName] = {
+          zuid: view.ZUID,
+          type: view.type,
+          updatedAt: view.createdAt,
+          createdAt: view.updatedAt,
+        };
+      }
     });
   zestyConfig.instance.views = viewObj;
 }
@@ -121,13 +125,14 @@ async function syncInstanceStyles() {
   res.data
     .filter((stylesheet) => stylesheet.status === "dev")
     .forEach((stylesheet) => {
-      makeFileSync("style", stylesheet.fileName, stylesheet.code);
-      styleObj[stylesheet.fileName] = {
-        zuid: stylesheet.ZUID,
-        type: stylesheet.type,
-        updatedAt: stylesheet.createdAt,
-        createdAt: stylesheet.updatedAt,
-      };
+      if (!makeFileSync("style", stylesheet.fileName, stylesheet.code)) {
+        styleObj[stylesheet.fileName] = {
+          zuid: stylesheet.ZUID,
+          type: stylesheet.type,
+          updatedAt: stylesheet.createdAt,
+          createdAt: stylesheet.updatedAt,
+        };
+      }
     });
   zestyConfig.instance.styles = styleObj;
 }
@@ -142,13 +147,14 @@ async function syncInstanceScipts() {
   res.data
     .filter((script) => script.status === "dev")
     .forEach((script) => {
-      makeFileSync("script", script.fileName, script.code);
-      scriptObj[script.fileName] = {
-        zuid: script.ZUID,
-        type: script.type,
-        updatedAt: script.createdAt,
-        createdAt: script.updatedAt,
-      };
+      if (!makeFileSync("script", script.fileName, script.code)) {
+        scriptObj[script.fileName] = {
+          zuid: script.ZUID,
+          type: script.type,
+          updatedAt: script.createdAt,
+          createdAt: script.updatedAt,
+        };
+      }
     });
   zestyConfig.instance.scripts = scriptObj;
 }
