@@ -2,6 +2,10 @@
 
 Use this package to connect the Visual Studio Code to your Zesty.io Instance. This extension will sync the remote instance content and create files to your local machine. You can edit the files (views, stylesheet and scripts) and save them locally. Saving a file will push the changes to the associated file from your instance.
 
+NOTE:
+
+The extension uses the file path from webengine when syncing the file to your local machine. Using special characted will result to error in file creation due to unable to create directory with special character.
+
 ## Getting Started
 
 - Install the `zesty-vscode-extension` package to vscode
@@ -78,3 +82,4 @@ Phase 1 Release
 - Submit bugs https://github.com/zesty-io/vscode-ext/issues/new/choose
 - Command for zesty init will create a shell zesty.json config file.
 - Sneak peak video https://www.youtube.com/watch?v=2pCqhK9iy2E
+
