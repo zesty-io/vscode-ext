@@ -258,6 +258,50 @@ async function saveFile(document) {
   }
 }
 
+async function syncFileFromUri(uri) {
+
+  let document = null;
+  const activeEditor = vscode.window.activeTextEditor;
+
+  if (uri) {
+    if (
+      activeEditor &&
+      activeEditor.document &&
+      activeEditor.document.uri.toString() === uri.toString()
+    ) {
+      document = activeEditor.document;
+    } else {
+      document = await vscode.workspace.openTextDocument(uri);
+    }
+  } else if (activeEditor && activeEditor.document) {
+    document = activeEditor.document;
+  }
+
+  if (!document) {
+    vscode.window.showErrorMessage("No file selected to sync.");
+    return;
+  }
+
+  if (document.isDirty) {
+    const choice = await vscode.window.showWarningMessage(
+      "File has unsaved changes. Save before syncing?",
+      "Save & Sync",
+      "Sync Without Saving",
+      "Cancel"
+    );
+    if (choice === "Cancel" || !choice) return;
+    if (choice === "Save & Sync") {
+      const saved = await document.save();
+      if (!saved) {
+        vscode.window.showErrorMessage("Save failed. Sync cancelled.");
+          return;
+        }
+      }
+  }
+
+  await saveFile(document);
+}
+
 function getFile(file) {
   var splitPath = file.fsPath.split("\\");
   var newSplitPath = splitPath.slice(
@@ -319,6 +363,15 @@ async function activate(context) {
       await writeConfig();
       vscode.window.showInformationMessage(`File sync is completed.`);
     })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      "zesty-vscode-extension.saveAndSyncFile",
+      async (uri) => {
+        await syncFileFromUri(uri);
+      }
+    )
   );
 
   vscode.workspace.onDidSaveTextDocument(async (document) => {

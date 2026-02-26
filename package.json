@@ -5,7 +5,7 @@
   "icon": "images/zesty-io.png",
   "publisher": "zesty-io",
   "description": "",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "engines": {
     "vscode": "^1.74.0"
   },
@@ -43,6 +43,10 @@
       {
         "command": "zesty-vscode-extension.run",
         "title": "Sync to Instance"
+      },
+      {
+        "command": "zesty-vscode-extension.saveAndSyncFile",
+        "title": "Save & Push to Instance"
       }
     ],
     "keybindings": [
@@ -57,6 +61,18 @@
           "when": "resourceFilename  == zesty.config.json",
           "command": "zesty-vscode-extension.run",
           "group": "zestyio-menu@1"
+        },
+        {
+          "when": "resourcePath =~ /webengine/",
+          "command": "zesty-vscode-extension.saveAndSyncFile",
+          "group": "zestyio-menu@2"
+        }
+      ],
+      "editor/context": [
+        {
+          "when": "resourcePath =~ /webengine/",
+          "command": "zesty-vscode-extension.saveAndSyncFile",
+          "group": "zestyio-menu@2"
         }
       ]
     }
